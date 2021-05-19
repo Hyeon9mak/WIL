@@ -1,7 +1,7 @@
 # 프로세스 스케줄러
 
 ## 장기/중기/단기 스케줄러
-![image-20210517135702894](/Users/hyeon9mak/Library/Application Support/typora-user-images/image-20210517135702894.png)
+<img width="816" alt="image-20210517135702894" src="https://user-images.githubusercontent.com/37354145/118755557-0a300a80-b8a4-11eb-85df-ce05c6e5bcad.png">
 
 ### 장기 스케줄러(Long Term Scheduler)
 - 어떤 프로세스를 준비 큐에 넣을 것인가?

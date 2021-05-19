@@ -59,7 +59,8 @@ CPU는 하드웨어이기 때문에 물리주소일 것 같지만, 논리주소�
 - Run time binding은 하드웨어적인 지원이 필요하다
   (Ex. base and limit registers, MMU)
 
-![image-20210517123228246](/Users/hyeon9mak/Library/Application Support/typora-user-images/image-20210517123228246.png)
+
+<img width="612" alt="image-20210517123228246" src="https://user-images.githubusercontent.com/37354145/118755541-043a2980-b8a4-11eb-869c-450c46eed24f.png">
 
 (A에 A + B 연산 결과를 할당하고, C로 이동해서 종료하는 프로그램이다.)  
 A, B, C Symbolic address들이 컴파일 타임에 Logical Address로 변경된다.
@@ -99,7 +100,7 @@ Compile time binding과 Load time binding은 프로그램이 시작될 때 주�
 ### MMU scheme
 사용자 프로세스가 CPU에서 수행되며 생성해내는 모든 주값에 대해 **base register (=relocation register)**의 값을 더한다.
 
-![image-20210517125630622](/Users/hyeon9mak/Library/Application Support/typora-user-images/image-20210517125630622.png)
+<img width="601" alt="image-20210517125630622" src="https://user-images.githubusercontent.com/37354145/118755551-07cdb080-b8a4-11eb-8d81-a83324de1c30.png">
 
 기본적인 MMU에서는 register 2개를 통해서 주소 변환을 수행한다.
 
@@ -111,7 +112,7 @@ CPU가 논리적 주소로 process의 정보를 요청하면, relocation registe
 
 이 프로그램이 만약 악의적인 프로그램이라서, 본인의 크기가 3000인데도 불구하고 CPU에게 메모리 4000번지를 달라고 하게끔 유도할 수도 있다. 그렇게 되면 다른 프로그램에 존재하는 메모리 위치를 요청하게 된다. 남의 프로그램 정보를 보려고 하면 안된다. 그래서 base register 주소를 더해주기 전에 limit register로 정보 체크를 먼저한다.
 
-![image-20210517134000090](/Users/hyeon9mak/Library/Application Support/typora-user-images/image-20210517134000090.png)
+<img width="613" alt="image-20210517134000090" src="https://user-images.githubusercontent.com/37354145/118755552-08fedd80-b8a4-11eb-945e-2a547ab08475.png">
 
 즉, Limit register 확인 작업이 먼저 선행되고, 그 후에 relocation register 작업이 진행된다.
 
@@ -185,7 +186,7 @@ user program은 논리 주소만을 다룬다. 실제 물리 주소를 볼 수 �
     가장 크기 때문에 SEEK TIME을 생각하지만(TRANSFER TIME이 워낙 미미해서), SWAPPING에서는 TRANSFER TIME도 상당부분을 차지한다.
 
 
-![image-20210517135512261](/Users/hyeon9mak/Library/Application Support/typora-user-images/image-20210517135512261.png)
+<img width="545" alt="image-20210517135512261" src="https://user-images.githubusercontent.com/37354145/118755555-09977400-b8a4-11eb-8dd5-415b530dc776.png">
 
 > 원래 이야기하는 SWAPPING도 본연의 의미는 이게 맞다. 그러나 최근엔 페이징 시스템에서 페이지를 쫒겨내는 것을 또 SWAP-OUT / SWAP-IN이라는 명칭을 사용한다.
 
@@ -220,7 +221,7 @@ Linking : 여러군대 존재하던 컴파일된 파일들을 하나로 묶어�
 
 물리적 메모리를 어떻게 관리할 것인가?
 
-![image-20210517142539843](/Users/hyeon9mak/Library/Application Support/typora-user-images/image-20210517142539843.png)
+<img width="109" alt="image-20210517142535576" src="https://user-images.githubusercontent.com/37354145/118755559-0b613780-b8a4-11eb-91ff-b2727ba1561a.png">
 
 - 메모리는 일반적으로 두 영역으로 나누어 사용
   - OS 상주 영역
@@ -257,7 +258,7 @@ Linking : 여러군대 존재하던 컴파일된 파일들을 하나로 묶어�
         - 프로그램 D가 차지하고 남은 공간도 너무 작아 다른 프로그램이 사용하지 못할 가능성이 높아 External fragmentation 으로 분류할 수 있다.
       - 가변 분할 방식은 Internal fragmentation은 안생긴다!
 
-  ![image-20210517143054940](/Users/hyeon9mak/Library/Application Support/typora-user-images/image-20210517143054940.png)
+<img width="598" alt="image-20210517143054940" src="https://user-images.githubusercontent.com/37354145/118755566-0dc39180-b8a4-11eb-8ebc-f26e846097df.png">
 
   - **Noncontiguous allocation (불연속 할당)**
     - 프로그램을 구성하는 주소공간을 잘게 쪼갠다(Page 단위)
