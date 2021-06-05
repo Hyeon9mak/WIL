@@ -1,4 +1,33 @@
-# 2021-05-16 TIL
+# valid annotation
+## @NotNull, @NotEmpty, @NotBlank
+
+`@NotNull` 은 말 그대로 Null만 허용하지 않는다. 이 때문에 `""`, `" "` 는 허용하게 된다.
+Null이 들어오면 로직에 예상치 못한 오류가 발생하거나, 문제가 생길 경우에 사용된다.
+
+`@NotEmpty` 는 Null과 `""` 를 허용하지 않는다. `@NotNull` 쪽에 `""` 검증이 추가된 것이다.
+
+`@NotBlank`  는 Null과 `""`, `" "` 를 모두 허용하지 않는다.
+
+즉, 3개 중 가장 검증 강도가 높다.
+
+
+
+### validation 어노테이션을 꼭 사용해야만 하는가?
+
+```java
+    public static LineServiceDto from(final Long id, final LineRequest lineRequest) {
+        if (Objects.isNull(id)) {
+            throw new SomeException();
+        }
+        return new LineServiceDto(id, lineRequest.getName(), lineRequest.getColor());
+    }
+```
+
+정적 팩터리 메서드를 통해서도 충분히 id Null에 대해서 예외처리를 해줄 수 있다.
+validation 어노테이션이 편리함을 제공해주는건 맞지만, 맹목적으로 거기에 의존할 필요는 없다.
+가장 중요한 것은 검증하는 방식이 아니라, 검증을 해야하는 이유(목적)과 검증 그 자체다.
+
+<br>
 
 ## @Valid 어노테이션과 사용 가능한 종류
 | Anotation                      | 제약조건                                          |
@@ -26,33 +55,3 @@
 
 
 <br>
-
-## JS에서 JSON의 키와 값이 일치하는 경우 생략 가능
-JSON 자료구조에 사용되는 Key와 Value가 완전히 동일한 경우 아래와 같이 생략이 가능하다.
-```javascript
-JSON.stringify({
-    email: email,
-    age: age,
-    password: password
-})
-```
-```javascript
-JSON.stringify({
-    email,
-    age,
-    password
-})
-```
-
-<br>
-
-## @ControllerAdvice, @RestControllerAdvice vs @ResponseStatus
-
-> Q. @RestControllerAdvice 어노테이션을 통해서 exception들을 핸들링 하곤 했는데, 대부분 ResponseEntity로 Http 상태코드만 반환하곤 했습니다. 그러다 오늘 @ResponseStatus 라는 어노테이션을 알게되었는데, exception 클래스 위에 붙여서 자동으로 Http 상태코드를 반환할 수 있는 것 같더라구요!
-별도로 Advice 클래스를 만들지 않아도 자동으로 Http 상태코드 response를 반환해준다는게 굉장한 장점인 것 같은데, 현업에서는 어떤 방식이 더 선호되는지 궁금합니다!
-
-> A. 당연한 얘기일 수 있지만 프로젝트 성격과 프로젝트 참여하는 사람 취향에 따라 달라질 것 같아요! 섞어서 쓰는 경우도 많을 것 같고요!
-예시를 전달하기 위해 저희 서비스를 말씀드리면 예외에 따라 Body와 Header가 크게 변경되는 부분이 있고, 예외 상황에 따라 별도의 비즈니스 로직을 처리하는 경우가 있어 대부분은 ExceptionHandler를 사용하는 것 같습니다!
-답변드리며 든 생각인데..! ExceptionHandler와 ResponseStatus를 섞어쓰는 경우는 있었어도, ResponseStatus 만으로 서비스를 했던 기억은 없네요 ㅎㅎ
-
-@ControllerAdvice만 쓰거나 @ResponseStatus를 섞어쓰는 경우는 있어도, @ResponseStatus만 사용하는 경우는 없다.

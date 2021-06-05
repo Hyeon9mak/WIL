@@ -1,4 +1,3 @@
-# 2021년 5월 12일
 ## @EnableWebMvc
 ```java
 @Retention(RetentionPolicy.RUNTIME)
