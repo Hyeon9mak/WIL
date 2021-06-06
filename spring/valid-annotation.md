@@ -53,5 +53,71 @@ validation 어노테이션이 편리함을 제공해주는건 맞지만, 맹목�
 | @AssertFalse                   | false 인가?                                       |
 | @AssertTrue                    | true 인가?                                        |
 
-
 <br>
+
+## Response 방향의 DTO에는 Validation 어노테이션을 붙이지 않는다.
+`'org.springframework.boot:spring-boot-starter-validation'` 의존성을 추가하면 DTO 단에 어노테이션을 붙이는 것으로 손쉽게 값 검증이 가능하다.
+
+우선 검증을 진행하고 싶은 필드 위에 `@NotNull`, `@NotEmpty` 등의 어노테이션을 붙인다.
+```java
+public class MemberRequest {
+
+    @NotNull(message = "INVALID_INPUT")
+    private String email;
+    @NotNull(message = "INVALID_INPUT")
+    private String password;
+    @NotNull(message = "INVALID_INPUT")
+    private Integer age;
+
+    public MemberRequest() {
+    }
+
+    public MemberRequest(String email, String password, Integer age) {
+        this.email = email;
+        this.password = password;
+        this.age = age;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public Integer getAge() {
+        return age;
+    }
+}
+```
+
+그 후 DTO가 인자로 사용되는 지점에 `@Valid` 어노테이션을 붙이면, 자동으로 검증이 진행된다.
+
+```java
+@RestController
+@RequestMapping("/api/members")
+public class MemberController {
+
+    private final MemberService memberService;
+
+    public MemberController(MemberService memberService) {
+        this.memberService = memberService;
+    }
+
+    @PostMapping
+    public ResponseEntity createMember(@Valid @RequestBody MemberRequest request) {
+        MemberResponse member = memberService.createMember(request);
+        return ResponseEntity.created(URI.create("/members/" + member.getId())).build();
+    }
+}
+```
+
+이렇게 Request 방향의 자동 검증은 지원하지만, Response 방향의 자동 검증은 지원하지 않는다. 
+아무리 눈을 씻고 찾아봐도 마땅히 `@Valid` 어노테이션을 붙일 곳이 보이지 않는다.
+
+'왜 Response 방향의 Validation 어노테이션을 붙일 곳이 없을까' 라는 고민하다가, 
+'굳이 할 필요가 없으니까 없겠구나' 라는 결론에 도달했다.
+
+검증 관련 문제가 발생할거라면 Request -> Domain 으로 변환되는 과정에서 먼저 발생했어야하고, 
+그 이후의 데이터는 이미 서비스 도메인으로 변환이 성공됐기 때문에 믿고 쓴다는 느낌인거 같다.
