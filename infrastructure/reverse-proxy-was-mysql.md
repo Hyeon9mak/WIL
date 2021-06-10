@@ -53,7 +53,7 @@ http {
   # Redirect all traffic to HTTPS
   server {
     listen 80;
-    return 301 https://$host$request_uri;
+    return 308 https://$host$request_uri;
   }
 
   server {
@@ -83,6 +83,9 @@ http {
   }
 }
 ```
+
+> `return 301 https://$host$request_uri;`에서 `return 308 https://$host$request_uri;`로 반환 코드가 변경되었는데, 
+> 301,302,303 Redirect HTTP Code는 POST, PUT 같은 요청 GET으로 바꿔서 Redirect 시킬 가능성이 있어서 `302->307`, `301->308`로 사용하는 것이 좋다고 한다.
 
 도커 컨테이너를 다시 만들고 실행시킨다.
 
@@ -181,3 +184,6 @@ security:
 > (별도의 설정을 진행하지 않았다면 MySQL에 테이블이 존재하지 않아 에러가 발생할 것이다.)
 
 POSTMAN 으로 Reverse Proxy 등록한 도메인 네임에 대해 테스트를 진행하면 된다.
+
+## References
+- [(HTTP) 상태 코드 - 307 vs 308](https://perfectacle.github.io/2017/10/16/http-status-code-307-vs-308/)
