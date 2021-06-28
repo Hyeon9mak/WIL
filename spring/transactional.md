@@ -29,3 +29,28 @@ Create/Update/Delete 는 테이블에 변화를 일으키기 때문에 트랜잭
 그와 별개로, Controller는 통신을 주고 받기도 바쁜 계층이다. Controller 클래스에서는 단순히 HTTP 요청에 맞게 비지니스 로직을 호출하는 구조로 설계하자.
 
 <br>
+
+## @Transcational(readOnly = true)
+`@Transcational(readOnly = true)` 옵션은 트랜잭션 간의 커밋/롤백 등을 보장해주는 옵션이 아니다.
+하나의 트랜잭션 내부에서 C/U/D 동작이 일어나지 않고 R만 일어나기를 기대하는 옵션이다.
+즉, Read 동작 외에 C/U/D 동작이 수행될 경우 `@Transcational(readOnly = true)` 옵션은 예외를 발생시킨다.
+
+그렇다면 우테코 미션 중에 `@Transcational(readOnly = true)` 의 효과를 왜 실감하지 못했는가?
+
+첫 번째 이유로 MySQL을 사용했기 때문이다. MySQL DBMS의 스펙상 `@Transcational(readOnly = true)` 옵션의 효과가 거의 없다고 한다. 
+두 번째 이유로 진행한 미션들의 조회 관련 서비스 레이어 메서드가 매우 간단했기 때문이다. 
+사실상 다른 C/U/D 작업 없이 순수하게 Read 작업을 1회만 수행하는 등 서비스 레이어 메서드가 매우 간결했기 때문에 
+`@Transcational(readOnly = true)` 의 효과를 실감하기 어려운 환경이었다.
+
+우테코 미션 수준에서 `@Transcational(readOnly = true)`의 효과를 기대해 볼 수 있는 상황으로는
+
+- 서비스 레이어 메서드에는 Read만 수행하도록 했으나 실수로 DAO쪽에서 C/U/D 동작을 추가하는 경우 방지
+- @DirtiesContext 어노테이션이 의도치 않게 동작되는 경우 방지
+
+가 있겠다.
+
+실제 현업에서는 우리가 알고 있는 서비스 레이어가 한 단계 더 분화한다고 하는데, 더욱 더 많이 추상화 되어 있는 하나의 명령을 소화하기 위해 
+동시에 여러가지 C/R/U/D 동작이 수행될 것이고, 바로 이 때 조회만 수행해야하는 동작에서 의도치 않게 C/U/D 작업이 혼용되는 것을 막기 위해 
+사용할 수도 있지 않을까? 라는 생각이 든다.
+
+<br>
