@@ -27,7 +27,8 @@ $ sudo docker run -it --rm --name certbot \
 
 그 후 현재 경로로 인증서를 복제해온다. 
 
-> (아마도 원본 키가 잘못될 가능성을 염두해서 백업해놓는 용도인거 같다.)
+> (추후 복제한 키를 이용해 도커 빌드를 진행할 것인데, 
+원본 키가 잘못될 가능성을 염두해서 키를 현재 경로로 복제해둔다.)
 
 ```
 $ sudo cp /etc/letsencrypt/live/[도메인주소]/fullchain.pem ./
@@ -192,6 +193,18 @@ security:
 > (별도의 설정을 진행하지 않았다면 MySQL에 테이블이 존재하지 않아 에러가 발생할 것이다.)
 
 POSTMAN 으로 Reverse Proxy 등록한 도메인 네임에 대해 테스트를 진행하면 된다.
+
+<br>
+
+## public IP에 대해
+글 전반적으로 사용된 public IP들은 같은 가용영역(지역)에 생성된 EC2 인스턴스 끼리라면 
+서로 같은 근거리 네트워크에 포함되므로, private IP로 대체할 수 있다.
+
+개발자가 직접적으로 접근할 때 사용하는 Bastion, 클라이언트가 요청을 최초로 받아들이는 reverse-proxy(web-server)를 
+제외한 나머지 인스턴스(WAS, DB)들은 public IP를 사용하지 않는 것을(태초에 EC2 인스턴스 생성시 발급바딪 않는 것을) 
+추천한다고 한다.
+
+<br>
 
 ## References
 - [(HTTP) 상태 코드 - 307 vs 308](https://perfectacle.github.io/2017/10/16/http-status-code-307-vs-308/)
