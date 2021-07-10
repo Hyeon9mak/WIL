@@ -99,8 +99,8 @@ http {
 도커 컨테이너를 다시 만들고 실행시킨다.
 
 ```
-$ docker build -t nextstep/reverse-proxy:0.0.2 .
-$ docker run -d -p 80:80 -p 443:443 --name proxy nextstep/reverse-proxy:0.0.2
+$ docker build -t [생성할 이미지 이름]:[태그] .
+$ docker run -d -p 80:80 -p 443:443 --name [컨테이너 이름] [생성할 이미지 이름]:[태그]
 ```
 
 <br>
