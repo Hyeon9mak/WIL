@@ -25,6 +25,9 @@ Amazon CloudFront `.html`, `.css`, `.js` 및 이미지 파일과 같은 정적 �
 
 ## CloudFront 설정
 `CloudFront - Origins` 탭에서 Origin으로 만들어둔 S3 bucket을 연결한다. 
+
+![무제 001](https://user-images.githubusercontent.com/37354145/125394332-821e3b00-e3e4-11eb-9082-1499d5c1d556.png)
+
 그러나 연결만으론 콘텐츠 접근이 불가능하다.
 
 ```xml
@@ -42,11 +45,20 @@ CloudFront를 통하건 말건 S3 bucket은 public access로 판단하고 모두
 
 CloudFront를 통해 S3 bucket의 콘텐츠에 접근하기 위해선 'CloudFront로 접근할 땐 S3 bucket의 public access 설정을 무시하게 해줘'라는 추가 설정을 진행해야 한다.
 
-`CloudFront - Security - Origin access identities` 메뉴에 접근 후, `Create origin access identity` 버튼을 클릭해서 OAI를 생성한다. 그 후 `CloudFront - Distributions` 메뉴로 돌아와 자신의 CloudFront를 선택한 다음 `Origins` 탭을 클릭 후 연결했던 S3 bucket을 선택하고 `Edit` 버튼을 클릭한다.
+`CloudFront - Security - Origin access identities` 메뉴에 접근 후, `Create origin access identity` 버튼을 클릭해서 OAI를 생성한다. 
+
+![무제 002](https://user-images.githubusercontent.com/37354145/125394344-85192b80-e3e4-11eb-946e-593b56ddc55e.png)
+
+그 후 `CloudFront - Distributions` 메뉴로 돌아와 자신의 CloudFront를 선택한 다음 `Origins` 탭을 클릭 후 연결했던 S3 bucket을 선택하고 `Edit` 버튼을 클릭한다.
+
+![무제 003](https://user-images.githubusercontent.com/37354145/125394350-864a5880-e3e4-11eb-99ae-2ce38ce1af32.png)
+
 `S3 bucket access` 설정이 2가지 보인다.
 
 - Don't use OAI (bucket must allow public access)
 - Yes use OAI (bucket can restrict access to only CloudFront)
+
+![무제 004](https://user-images.githubusercontent.com/37354145/125394353-86e2ef00-e3e4-11eb-8dea-978acb90c490.png)
 
 Don't use OAI 설정은 S3 bucket의 public access 설정을 따르는 것이고, 
 Yes use OAI 설정은 S3 bucket의 public access 설정을 CloudFront OAI를 통해 무시하고 접근하게 해준다.
@@ -61,6 +73,8 @@ Yes use OAI 설정을 선택하고, Origin access identity를 방금 전 생성�
 
 ## S3 설정
 자신의 S3 bucket의 `권한` 탭으로 접근한 후, `버킷 정책`에 아래와 같은 JSON을 작성한다.
+
+![image](https://user-images.githubusercontent.com/37354145/125394832-433cb500-e3e5-11eb-8cbb-8d0d33300f2b.png)
 
 ```JSON
 {
@@ -83,6 +97,26 @@ Yes use OAI 설정을 선택하고, Origin access identity를 방금 전 생성�
 `[CloudFront에서 만들었떤 OAI ID]`에는 OAI의 ID 값을 적어주면 되고, 
 `[현재 접속한 s3 bucket명]`에는 말 그대로 현재 s3 bucket의 이름을 적어주면 된다.
 
+CloudFront와 S3 설정이 모두 완료되었을 경우 정상적으로 콘텐츠 접근이 가능할 것이다.
+
 <br>
 
-CloudFront와 S3 설정이 모두 완료되었을 경우 정상적으로 콘텐츠 접근이 가능할 것이다.
+## ☁️ (추가설정) CloudFront - Origin Shield 설정
+
+![무제 005](https://user-images.githubusercontent.com/37354145/125394354-86e2ef00-e3e4-11eb-8ece-41c5cdca6e77.png)
+
+CloudFront 쪽에 Origin Shield 설정은 Origin으로 등록한 스토리지(S3 등)에 전달되는 리퀘스트의 횟수를 줄여 관리비용을 줄인다고 한다. (캐싱 적중률을 높힌다는 이야기)
+
+CloudFront의 `Origins` 탭 - 연결했던 S3 bucket `Edit` 으로 접근해서 
+`Enable Origin Shield` 설정을 확인해보자.
+
+Yes 옵션을 선택 후, 자기 서비스 오리진의 지역에 가까운 지역을 선택해서 골라주면 설정이 끝난다. 
+실제 캐싱 적중률 상승에 관련해서는 며칠 간의 관찰이 필요할 것으로 보인다.
+
+<br>
+
+## References
+- [Amazon S3이란 무엇인가요? - Amazon Simple Storage Service](https://docs.aws.amazon.com/ko_kr/AmazonS3/latest/userguide/Welcome.html)
+- [Amazon CloudFront란 무엇입니까? - Amazon CloudFront](https://docs.aws.amazon.com/ko_kr/AmazonCloudFront/latest/DeveloperGuide/Introduction.html)
+- [Amazon CloudFront Origin Shield 사용 - Amazon CloudFront](https://docs.aws.amazon.com/ko_kr/AmazonCloudFront/latest/DeveloperGuide/origin-shield.html)
+- [Origin Shield - 리눅서의 기술술 블로그](https://linuxer.name/tag/origin-shield/)
