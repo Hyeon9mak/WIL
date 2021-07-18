@@ -1,4 +1,21 @@
-# Nginx 웹 소켓 설정
+# Nginx 웹 소켓 프록시 설정
+기존 구성해둔 `nginx.conf` 파일의 location 설정 부분에 웹 소켓 연결 요청을 위한 
+몇 가지 헤더값 설정만 진행해주면 된다.
+
+```
+# Web-socket 관련 설정들
+
+# 1. HTTP/1.1 버전에서 지원하는 프로토콜 전환 메커니즘을 사용한다
+proxy_http_version 1.1;
+
+# 2. hop-by-hop 헤더를 사용한다
+proxy_set_header Upgrade $http_upgrade;
+proxy_set_header Connection "upgrade";
+# 3. -
+proxy_set_header Host $host;
+```
+
+실제로 적용한 모습
 
 ```
 events {}
@@ -47,3 +64,7 @@ http {
   }
 }
 ```
+
+## References
+- [Using NGINX as a WebSocket Proxy](https://www.nginx.com/blog/websocket-nginx/)
+- [Nginx를 이용한 WebSocket reverse proxy - Joinc](https://www.joinc.co.kr/w/man/12/Nginx/wsproxy)
