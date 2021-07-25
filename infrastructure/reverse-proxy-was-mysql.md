@@ -37,7 +37,7 @@ $ sudo cp /etc/letsencrypt/live/[도메인주소]/privkey.pem ./
 
 `Dockerfile` 파일을 아래와 같이 작성한다.
 
-```
+```Dockerfile
 # Dockerfile
 
 FROM nginx
@@ -49,7 +49,7 @@ COPY privkey.pem /etc/letsencrypt/live/[도메인주소]/privkey.pem
 
 `nginx.conf` 파일을 아래와 같이 작성한다.
 
-```
+```conf
 # nginx.conf
 
 events {}
@@ -139,7 +139,7 @@ $ sudo vim /etc/mysql/mysql.conf.d/mysqld.cnf
 
 포트번호와 바인딩 주소 설정
 
-```
+```conf
 # mysqld.cnf
 
 -- 보안그룹에 허용되어있는 포트. 우테코 SG-DEFAULT 보안그룹 기준 8080과 80을 사용할 수 있음.
@@ -167,7 +167,7 @@ $ sudo service mysql restart
 
 WAS용 EC2 인스턴스에서 서버 프로젝트 파일을 `$ git clone` 해서 가져온 후, `src/main/resource/application-prod.yml` 파일을 아래와 같이 생성한다.
 
-```
+```yml
 # application-prod.yml
 
 spring:

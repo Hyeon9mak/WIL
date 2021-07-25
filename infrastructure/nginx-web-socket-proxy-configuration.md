@@ -9,7 +9,7 @@ WebSocket을 지원할 때 리버스 프록시 서버가 직면하는 몇 가지
 
 Nginx는 클라이언트와 WAS 간 터널(소켓)을 설정할 수 있도록 WebSocket을 지원한다. NGINX가 클라이언트에서 WAS로 업그레이드 요청을 보내려면 Upgrade 및 Connection 헤더를 명시적으로 설정해야 한다.
 
-```
+```conf
 # Web-socket 관련 설정들
 
 # 1. HTTP/1.1 버전에서 지원하는 프로토콜 전환 메커니즘을 사용한다
@@ -27,7 +27,7 @@ proxy_set_header Host $host;
 기존 구성해둔 `nginx.conf` 파일의 location 설정 부분에 웹 소켓 연결 요청을 위한 
 몇 가지 헤더값 설정만 진행해주면 된다.
 
-```
+```conf
 # nginx.conf
 
 events {}
