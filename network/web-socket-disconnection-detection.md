@@ -60,7 +60,7 @@ javascript쪽 코드에서 `stompClient.connect`는 헤더에 클라이언트의
 
 <br>
 
-### 최초 연결 때 - ChannelInterceptor를 써보자
+## 최초 연결 때 - ChannelInterceptor를 써보자
 
 ```java
 @Configuration
