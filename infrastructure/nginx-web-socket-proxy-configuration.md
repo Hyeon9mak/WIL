@@ -1,6 +1,13 @@
 # Nginx 웹 소켓 프록시 설정
-기존 구성해둔 `nginx.conf` 파일의 location 설정 부분에 웹 소켓 연결 요청을 위한 
-몇 가지 헤더값 설정만 진행해주면 된다.
+Nginx는 버전 1.3부터 ​​WebSocket을 지원하며, WebSocket의 로드 밸런싱 을 수행 할 수 있다. 
+
+HTTP에서 WebSocket으로 연결 전환시 HTTP의 Upgrade 및 Connection 헤더를 사용한다. 
+
+WebSocket을 지원할 때 리버스 프록시 서버가 직면하는 몇 가지 문제가 있다. 
+하나는 WebSocket이 hop-by-hop 프로토콜이므로 프록시 서버가 클라이언트의 Upgrade 요청을 가로챌 때 적절한 헤더를 포함하여 WAS 서버에 업그레이드 요청을 보내야 한다는 것이다. 
+또한 HTTP의 단기 연결과 달리 WebSocket은 오래 지속되기 때문에, 리버스 프록시는 연결을 닫지 않고 열린 상태로 유지하는 것을 허용해야 한다.
+
+Nginx는 클라이언트와 WAS 간 터널(소켓)을 설정할 수 있도록 WebSocket을 지원한다. NGINX가 클라이언트에서 WAS로 업그레이드 요청을 보내려면 Upgrade 및 Connection 헤더를 명시적으로 설정해야 한다.
 
 ```
 # Web-socket 관련 설정들
@@ -11,13 +18,18 @@ proxy_http_version 1.1;
 # 2. hop-by-hop 헤더를 사용한다
 proxy_set_header Upgrade $http_upgrade;
 proxy_set_header Connection "upgrade";
-# 3. -
+# 3. 받는 대상 서버(WAS)
 proxy_set_header Host $host;
 ```
 
 실제로 적용한 모습
 
+기존 구성해둔 `nginx.conf` 파일의 location 설정 부분에 웹 소켓 연결 요청을 위한 
+몇 가지 헤더값 설정만 진행해주면 된다.
+
 ```
+# nginx.conf
+
 events {}
 
 http {
