@@ -57,7 +57,7 @@ $ aws cloudfront create-invalidation --distribution-id [CloudFront distribution 
 ```
 
 > 이 기능을 처음 이용할 당시 권한 문제(`not authorized to perform:cloudfront:CreateInvalidation`)를 마주쳤다. 
-> CU께 상황설명을 설명 드리고 Invalidation 요청 권한을 부여 받았다.
+> CU께 상황설명을 설명 드리고 Invalidation 요청 권한을 부여 받았다. 항상 감사합니다 CU! 🙇‍♂️
 
 요청이 성공적으로 생성된 것을 웹 콘솔을 통해 확인했다면, 자동화를 위해 해당 명령어를 CI/CD 스크립트에 추가해주면 끝난다. 우리 팀의 경우 Github actions를 이용중이기 때문에 프론트엔드 배포용 workflow 파일을 수정했다.
 
