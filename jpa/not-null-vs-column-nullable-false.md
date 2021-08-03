@@ -1,7 +1,9 @@
 # @NotNull vs @Column(nullable = false)
 
+> 앞서 읽으면 좋은 글 - [@NotNull 어노테이션 예외처리 핸들링](https://github.com/Hyeon9mak/WIL/blob/main/jpa/not-null-annotation-exception-handling.md)
+
 ## summary
-lombok에서 지원하는 `@NonNull` 어노테이션을 통해 엔티티의 필드를 검증하던 중 lombok의 `@NonNull` 어노테이션을 제거하고 엔티티의 생성자에 검증 메서드를 직접 작성할까 하던 중, `javax.validation.constraints`의 `@NotNull` 어노테이션을 엔티티에도 붙여 사용할 수 있음을 알게 되었다.
+lombok에서 지원하는 `@NonNull` 어노테이션을 통해 엔티티의 필드를 검증하던 중, `javax.validation.constraints`의 `@NotNull` 어노테이션도 엔티티에 붙여 사용할 수 있음을 알게 되었다.
 
 <br>
 
