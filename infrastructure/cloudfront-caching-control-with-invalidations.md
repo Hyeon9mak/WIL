@@ -49,7 +49,7 @@ Invalidation 요청이 모든 엣지 로케이션에 적용이 완료되면 Stat
 
 <br>
 
-## ## CloudFront Invalidations - aws cli
+## CloudFront Invalidations - aws cli
 우선 aws cli를 통해 Invalidation을 요청하는 방법은 아래와 같다.
 
 ```
