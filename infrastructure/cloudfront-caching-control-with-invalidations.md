@@ -12,7 +12,7 @@
 때문에 `CloudFront - Edit behavior - Cache key and origin requests - Cache policy` 설정에서 
 기본 설정인 `CachingOptimized`를 `CachingDisabled`로 바꿔 CloudFront가 캐싱을 진행하지 않도록 하고자 했다.
 
-그런데 [루트](https://github.com/junroot)가 `CloudFront - Invalidations` 설정을 이용해야 하지 않냐는 의견을 제시했다. 
+그런데 [루트](https://github.com/junroot)가 `CloudFront - Invalidations` 설정을 이용해야 하지 않겠냐는 의견을 제시했다. 
 
 > Invalidations 설정은 캐시가 아직 만료되지 않고 남아 있어도 강제로 캐시를 삭제하는 기능이다. 
 > 삭제 후 요청이 들어오면 캐시를 진행하는 엣지 로케이션이 오리진(S3 버킷)에서 새 파일을 가져오므로 캐시가 갱신되는 효과를 가진다. 
@@ -20,7 +20,7 @@
 > Cloudfront로 배포되는 파일은 기본 설정을 변경하지 않았다면 [24시간동안 캐시가 유지](https://docs.aws.amazon.com/ko_kr/AmazonCloudFront/latest/DeveloperGuide/Expiration.html)된다.
 
 
-루트의 말을 듣고 곰곰히 생각해보니, CloudFront는 주로 S3 버킷에 대한 조회권한 및 도메인 설정, 캐싱을 위해서 사용된다. 그런데 캐싱 정책을 `CachingDisabled`로 바꿔 캐싱을 막는다는 건, CloudFront의 주요 기능 중 하나를 사용하지 않는 것과 다름 없었다.
+곰곰히 생각해보니 루트의 말이 맞는거 같았다. CloudFront는 주로 S3 버킷에 대한 조회권한 및 도메인 설정, 캐싱을 위해서 사용된다. 그런데 캐싱 정책을 `CachingDisabled`로 바꿔 캐싱을 막는다는 건, CloudFront의 주요 기능 중 하나를 사용하지 않는 것과 다름 없었다.
 
 <br>
 
@@ -43,9 +43,9 @@ Invalidation 요청이 모든 엣지 로케이션에 적용이 완료되면 Stat
 
 <br>
 
-그러나 웹 콘솔을 이용하는 방법은 굉장히 귀찮다. 프론트엔드 배포가 끝나면 매번 CloudFront 콘솔에 로그인하고, 배포용 CloudFront distribution을 찾고, Invalidation 요청하는 단계를 거쳐야한다. 
+그러나 웹 콘솔을 이용하는 방법은 굉장히 귀찮다! 프론트엔드 배포가 끝나면 매번 CloudFront 콘솔에 로그인하고, 배포용 CloudFront distribution을 찾고, Invalidation 요청하는 단계를 거쳐야한다. 
 
-'CI/CD로 구성해둔 배포 자동화 마지막 단계에 Invalidation 요청도 포함시킬 수 없을까?' 고민을 했는데, 다행히 aws cli를 이용한 CloudFront Invalidation 신청 방법이 있었다!
+'CI/CD로 구성해둔 배포 자동화 마지막 단계에 Invalidation 요청도 포함시킬 수 없을까?' 고민을 했는데, 다행히 aws cli를 이용한 CloudFront Invalidation 요청 방법이 있었다!
 
 <br>
 
@@ -59,7 +59,7 @@ $ aws cloudfront create-invalidation --distribution-id [CloudFront distribution 
 > 이 기능을 처음 이용할 당시 권한 문제(`not authorized to perform:cloudfront:CreateInvalidation`)를 마주쳤다. 
 > CU께 상황설명을 설명 드리고 Invalidation 요청 권한을 부여 받았다. 항상 감사합니다 CU! 🙇‍♂️
 
-요청이 성공적으로 생성된 것을 웹 콘솔을 통해 확인했다면, 자동화를 위해 해당 명령어를 CI/CD 스크립트에 추가해주면 끝난다. 우리 팀의 경우 Github actions를 이용중이기 때문에 프론트엔드 배포용 workflow 파일을 수정했다.
+요청이 성공적으로 생성된 것을 웹 콘솔을 통해 확인했다면, 자동화를 위해 해당 명령어를 CI/CD 스크립트에 추가 해주면 끝난다. 우리 팀의 경우 Github actions를 이용중이기 때문에 프론트엔드 배포용 workflow 파일을 수정했다.
 
 ```yml
 name: Node.js Package
