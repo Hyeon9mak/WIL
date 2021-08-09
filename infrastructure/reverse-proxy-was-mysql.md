@@ -27,8 +27,7 @@ $ sudo docker run -it --rm --name certbot \
 
 그 후 현재 경로로 인증서를 복제해온다. 
 
-> (추후 복제한 키를 이용해 도커 빌드를 진행할 것인데, 
-원본 키가 잘못될 가능성을 염두해서 키를 현재 경로로 복제해둔다.)
+> 추후 복제한 키를 이용해 도커 빌드를 진행할 것인데, `Dockerfile`에서 `/etc/letsencrypt/live/[도메인주소]/`까지 접근할 권한이 없기 때문에(=접근할 수 없기 때문에) `sudo cp` 명령어를 통해 키를 현재 경로로 복제해둔다.
 
 ```
 $ sudo cp /etc/letsencrypt/live/[도메인주소]/fullchain.pem ./
