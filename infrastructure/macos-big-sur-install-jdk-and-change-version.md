@@ -5,8 +5,6 @@
 기존 로컬에 설치되어 있던 버전은 **JDK 14** 였기 때문에 버전 변경이 필요했는데 
 버전 변경이 뜻대로 이루어지지 않아 반나절을 고생했다.
 
-핵심은 macOS Big Sur 업데이트 이후 JDK 경로를 지정해주는 방법이 조금 바꼈다.
-
 <br>
 
 ## Homebrew를 이용한 JDK 8 설치
@@ -60,6 +58,8 @@ Matching Java Virtual Machines (2):
 export JAVA_HOME=/Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home
 export PATH=$JAVA_HOME/bin:$PATH
 ```
+
+핵심은 JDK 경로가 조금 다르다는 것!
 
 <br>
 
