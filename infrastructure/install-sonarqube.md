@@ -108,6 +108,8 @@ increase to at least [262144]
 `vm.max_map_count` 값이 최소 262144는 되어야 소나큐브 서버가 동작할 수 있다. 이를 위한 설정을 
 조금 해주어야 한다.
 
+> vm.max_map_count는 환경 변수. /proc/sys/vm/max_map_count 파일을 가리킨다. 이 파일은 Linux kernel의 메모리 맵 크기를 조절 할 수 있다. 메모리 매핑 작업이 많이 일어나는 프로세스일수록 가상 메모리에서의 주소 공간인 가상 주소 공간을 많이 필요로 하는데, Linux는 하나의 애플리케이션이 너무 많은 메모리를 매핑하는 것을 방지하기 위해 vm.max_map_count 값을 65530으로 제한하고 있는 것이다.
+
 ```
 # /etc/sysctl.conf 파일의 최하단
 vm.max_map_count=262144
