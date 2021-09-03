@@ -1,7 +1,7 @@
-# (구구만 고생하신) sonarcloud 적용기
+# (구구만 고생하신) SonarCloud 적용기
 
 ## summary
-우아한테크코스 레벨4 [HTTP 서버 구현하기](https://github.com/woowacourse/jwp-dashboard-http/pull/26) 미션을 진행하던 중이었다.
+우아한테크코스 레벨4 [HTTP 서버 구현하기](https://github.com/woowacourse/jwp-dashboard-http/pull/26) 미션을 진행하던 중이었다.
 미션대로 구현을 완료하고 PR(Pull Request)를 작성했는데 정적분석 툴 SonarQube 가 자동으로 동작하고,
 분석 결과도 PR 페이지에서 곧장 보여주고 있었다?!
 
