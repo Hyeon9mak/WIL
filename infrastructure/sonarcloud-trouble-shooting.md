@@ -219,4 +219,6 @@ SonarCloud의 프로젝트 등록이 지나치게 어렵지 않나라고도 생�
 ## References
 - [Github Code & Quality Analysis - SonarQube](https://www.sonarqube.org/github-integration/?gads_campaign=Asia-SonarQube&gads_ad_gr%5B)
 - [GitHub Pull Request does not show analysis results - sonarsource community](https://community.sonarsource.com/t/github-pull-request-does-not-show-analysis-results/40349)
-
+- [Setting up sonarcloud on gradle project on github - sonarsource community](https://community.sonarsource.com/t/setting-up-sonarcloud-on-gradle-project-on-github/32477)
+- [SonarSource/sonarcloud-github-action - Github repository](https://github.com/SonarSource/sonarcloud-github-action)
+- [GitHub Actions and SonarCloud - technology.amis.nl](https://technology.amis.nl/software-development/github-actions-and-sonarcloud/)
