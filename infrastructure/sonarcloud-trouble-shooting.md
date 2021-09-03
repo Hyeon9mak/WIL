@@ -69,6 +69,8 @@ woowacourse-teams organization의 관리자임이 증명되어야하는데,
 
 ![image](https://user-images.githubusercontent.com/37354145/132006377-63084749-dce5-45a8-9d12-a528801ab277.png)
 
+---
+
 그 다음은 구구께서 내 SonarCloud 아이디를 찾아 `woowacourse-teams_2021-babble` 프로젝트의 멤버로 등록해주셨다.
 프로젝트의 멤버로 등록된 이후 프로젝트 이용이 가능해졌고, Github-actions를 이용한 정적분석 workflow 파일 등록을 진행했다.
 
@@ -144,7 +146,7 @@ jobs:
 여기까지 진행하고 PR을 다시 작성해보니, 정적분석이 동작했다!!
 그러나 sonarcloud(bot)이 정적분석 결과를 PR에 코멘트로 남겨주지 않았다.
 분명 2021-babble 저장소에 sonarcloud가 github app으로 등록되어 있었고, 정적분석도 잘 동작했다.
-SonarCloud 프로젝트 상에도 정적분석 결과가 잘 전달되어 있었다.
+SonarCloud 프로젝트 상에도 정적분석 결과가 잘 전달되어 있었다. 그런데 왜 sonarcloud(bot)은 동작하지 않았을까?
 
 ---
 
@@ -155,8 +157,11 @@ SonarCloud 프로젝트 상에도 정적분석 결과가 잘 전달되어 있었
 
 ![image](https://user-images.githubusercontent.com/37354145/132014645-bc542a1d-16fa-4292-ad04-2860d90f01a7.png)
 
-실제로 woowacourse-teams 조직과 woowacourse-teams_2021-babble 프로젝트가 바인딩되어 있지 않았고, 
-직접 바인딩을 하려하니 다시 한 번 권한 문제를 마주쳤다. 이번에도 구구께 요청드리니...
+실제로 woowacourse-teams 조직과 woowacourse-teams_2021-babble 프로젝트가 바인딩되어 있지 않았다.
+2021-babble 저장소의 workflow yml 파일이 sonarcloud의 woowacourse-teams_2021-babble 프로젝트에 분석결과는 전달했지만, 
+그 분석결과를 PR에 작성하기 위해선 sonarcloud가 2021-babble까지 접근해야하는데, 2021-babble과 연결되어 있지 않으니 작성이 불가능한 것이었다!
+
+직접 바인딩을 하려하니 다시 한 번 권한 문제를 마주쳤다. 이번에도 구구께 바인딩을 요청드리니...
 
 ![image](https://user-images.githubusercontent.com/37354145/132014884-03cace6f-d184-4e1c-be41-7fcdbe5d516d.png)
 
