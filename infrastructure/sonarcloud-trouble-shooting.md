@@ -169,6 +169,18 @@ SonarCloud 프로젝트 상에도 정적분석 결과가 잘 전달되어 있었
 
 <br>
 
+## PR Merge 전 정적분석 통과를 필수로 만들기
+![image](https://user-images.githubusercontent.com/37354145/132078244-03cd27e2-b3a8-43c1-b045-d0e556bbb587.png)
+
+저장소의 `Settings`-`Branches` 메뉴로 이동해서 설정을 진행하고 싶은 브랜치 각각의 `Edit` 화면으로 이동한다.
+
+![image](https://user-images.githubusercontent.com/37354145/132078237-bc8ac4d8-d0be-4323-8a7e-e4637082454f.png)
+
+`Require status checks to pass before merging`을 선택하면 선택한 기준이 통과되기 전까진 브랜치 Merge가 불가능 하다!
+그 후 `Search for status checks in the last week for this repostiroy` 검색을 통해 SonarCloud를 등록한다!
+
+<br>
+
 ## Test Coverage 낮추기
 
 SonarCloud를 이용한 Automatical 정적분석을 등록한지 얼마 되지 않아, 루트의 PR이 분석 기준을 통과하지 못했다는 메일이 날아왔다.
