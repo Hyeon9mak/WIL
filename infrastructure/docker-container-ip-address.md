@@ -1,6 +1,6 @@
 # 도커 컨테이너 IP 주소 트러블 슈팅
 
-## Summary
+## 첫 번째 이슈 - Summary
 babble 프로젝트를 진행하면서, 상용 서버에서 릴리즈 테스트를 진행하지 말고 
 별도의 테스팅 서버를 만들어서 릴리즈 테스트를 진행하고자 했다.
 
@@ -37,7 +37,7 @@ inspect 명령을 통해 컨테이너 내부에서 사용되는 IP 주소를 알
 
 <br>
 
-## 원인 파악
+## 첫 번째 이슈 - 원인 파악
 그러나 며칠 후 CI/CD를 통해 WAS가 재배포 되면서 문제가 발생했다. 
 WAS가 빌드 된 후 컨테이너로 도커에 오르자마자 종료되는 것이었다. 처음에는 단순히 WAS 빌드가 잘못 되었다고 판단했으나, WAS를 로컬에 띄워보니 아무런 문제가 없었다.
 
@@ -56,7 +56,7 @@ CREATE USER [유저 이름]@'[IP주소]' IDENTIFIED BY '[비밀번호]';
 
 <br>
 
-## 해결 방법
+## 첫 번째 이슈 - 해결 방법
 현재는 데이터베이스에서 모든 IP 주소에서 들어오는 요청을 허용하는 것으로 해결하였으나, 
 도커 컨테이너를 올릴 때 원하는 IP를 직접 기입하는 방법으로도 해결 할 수 있다.
 
@@ -81,6 +81,88 @@ CREATE USER [유저 이름]@'[IP주소]' IDENTIFIED BY '[비밀번호]';
 
 --link : 다른 컨테이너에서 접근시 이름을 설정
 ```
+
+<br>
+
+## 두 번째 이슈 - summary
+어느 날 Babble 팀 프로젝트 테스트용 EC2 인스턴스의 WAS 프로그램이 비정상적으로 종료되어 있음을 확인했다. 
+종료된 시점은 Babble 팀 프로젝트에서 Spring 프로필 파일(yml)을 변경한 후였는데, 
+기존 사용중이던 `application-local.yml` 프로필에선 같은 서브넷 내에 있는 DB 도커 컨테이너를 조회하고 있었고, 
+새로이 바뀐 `application-local.yml` 프로필에선 H2 인메모리 DB를 조회하고 있었다.
+
+이 때문에 새롭게 추가한 `application-dev` 프로필을 사용하도록 설정을 교체했는데, 
+테스트용 EC2 인스턴스 내부에서 DB 도커 컨테이너를 조작할 경우 DB 도커 컨테이너의 IP가 변경될 가능성이 다분했다.
+도커 컨테이너의 IP가 변경될 때마다 `application-dev.yml` 파일에서 IP를 변경하는 것은 공수가 크므로,
+`application-dev.yml` 파일이 아닌 테스트용 EC2 인스턴스 내부에서 스크립트 파일로 데이터베이스 IP를 관리하고자 했다.
+
+```yml
+# application-dev.yml
+
+spring:
+  datasource:
+#   url: jdbc:mariadb://{IP}:3306/babble
+    driver-class-name: org.mariadb.jdbc.Driver
+    username: babble
+```
+```
+# EC2 내부 Dockerfile
+
+FROM openjdk:8
+COPY babble-0.0.1-SNAPSHOT.jar app.jar
+ENTRYPOINT ["java", "-jar", "-Dspring.profiles.active=dev","-Dspring.datasource.url=jdbc:mariadb://{DB 컨테이너 IP}:3306/babble" ...(기타설정)]
+```
+
+EC2 내부 `Dockerfile`에 DB 컨테이너 IP를 기입하기 위해 DB 컨테이너 IP를 조회했다.
+
+![image](https://user-images.githubusercontent.com/37354145/135214449-bf4952e5-a123-4fa4-8e37-4eeb52e04576.png)
+
+`docker inspect {DB 컨테이너} | grep IPAddress` 명령을 통해 IP를 조회했을 때 `172.21.0.2` IP를 확인할 수 있었다. '도커 컨테이너 IP 서브넷은 `172.17.0.*` 가 아니었나? 뭔가 달라졌나...' 하고 대수롭지 않게 넘기고 `172.21.0.2` IP를 `Dockerfile`에 등록했다. 그러나 계속해서 Spring 애플리케이션 서버 빌드가 실패했다.
+
+<br>
+
+## 두 번째 이슈 - 해결 방법
+
+이어서 [루트가 바톤을 넘겨받아 트러블 슈팅을 진행](https://iodized-capri-aa0.notion.site/Docker-network-dbc4610f6f33444f81d66046309b6d5a)했다. 
+도커를 사용하면 `docker0` 라는 네트워크 인터페이스가 생성되고, 도커에서는 이 네트워크 인터페이스에 `bridge`라는 네트워크 드라이버를 이용해서 접근한다.
+
+각각의 컨테이너는 여러 개의 네트워크(서브넷)에 속할 수 있고, 각 서브넷에 맞는 IP를 따로 할당 받는다. 이 때 우리는 `bridge` 네트워크의 IP 주소를 확인했어야했는데, `db_default`라는 네트워크의 IP주소를 확인하고 있었다.
+
+```
+"brdige": {
+    ...(생략)
+    "IPAddress": "172.17.0.2",
+    ...(생략)
+},
+"db_default": {
+    ...(생략)
+    "IpAddress": "172.21.0.2",
+    ...(생략)
+}
+```
+
+<br> 
+
+## 두 번째 이슈 - 느낀 점
+얼마전에 스프링 프로필(yml)파일을 리팩토링하면서 재미본 부분이 많다보니 생각이 거기에만 갇혀있었던거 같다. 도커 네트워크를 얄팍하게 알고 있어서 '도커 IP 범위는 `172.17.0.*` 아닌가? 조금 다를수도 있나보다' 하고 넘어가버렸다. 얄팍하게 아는게 이렇게 위험하구나 느낀다.
+
+모의면접 때 CU께서 "도커 네트워크를 공부해보세요." 하셨었는데, 그 때 도커 네트워크를 공부했다면 조금 더 수월하게 해결하지 않았을까 아쉬움이 생긴다.
+
+<br>
+
+## 두 번째 이슈 - 남는 의문
+
+루트 덕분에 문제를 해결하고 "`docker inspect {DB 컨테이너} | grep IPAddress` 명령은 단편적인 정보만 제공하기 때문에 `docker inspect {DB 컨테이너}`로 전체를 확인해야하는구나." 라고 결론을 지었다.
+
+그런데 테스트용 EC2 인스턴스에 다시 접속해서 `docker inspect {DB 컨테이너} | grep IPAddress` 명령을 사용하니 이전에 사용할 때와 달리 더 많은 정보를 포함하고 있었다.
+
+![image](https://user-images.githubusercontent.com/37354145/135214460-5fbb3d99-0610-4cee-ad66-055fe1b15f1a.png)
+
+분명히 `bridge` 네트워크의 IP 주소를 포함하지 않고 있었는데, 이번에는 포함되어 있었다.
+루트가 별도로 설정을 만진게 있나 물었으나, 루트는 테스트를 위해서 커스텀 네트워크(서브넷)를 생성한거 뿐이라고 말했다. 
+
+즉, 커스텀 네트워크를 생성하기 전엔 `bridge` 네트워크의 IP 주소가 함께 보이지 않았으나, 커스텀 네트워크를 생성하고 나니 `bridge` 네트워크와 커스텀 네트워크의 IP 주소가 함께 포함되어 출력되고 있었다...
+
+원인 파악을 위해선 도커 네트워크에 대한 공부가 더 필요할 것 같다.
 
 <br>
 
