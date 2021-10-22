@@ -497,3 +497,4 @@ TransactionManager가 트랜잭션을 식별하면 DataSource의 커넥션을 �
 - [SpringBoot AutoConfiguration을 대하는 자세 - Tecoble](https://tecoble.techcourse.co.kr/post/2021-10-14-springboot-autoconfiguration/)
 - [MySQL – Replication 구조 - Rain.i](http://cloudrain21.com/mysql-replication)
 - [LazyConnectionDataSourceProxy 알아보기](https://sup2is.github.io/2021/07/08/lazy-connection-datasource-proxy.html)
+- 스페샬 땡스투 [완태](https://github.com/wannte), [에어](https://github.com/KJunseo)
