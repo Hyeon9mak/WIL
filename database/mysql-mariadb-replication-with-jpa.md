@@ -463,9 +463,8 @@ TransactionManager가 트랜잭션을 식별하면 DataSource의 커넥션을 �
 
 <br>
 
-## 요약
-다시 한 번 정리해보면 아래와 같은 설정들이 진행됐다.
-
+## 요약 및 이슈 내용
+### 스프링 DataSource 설정 요약
 1. 스프링 프로필 파일에 작성된 datasource 정보들을 DataSourceProperties 클래스를 통해 수동으로 매핑한다.
 2. `isReadOnly` 분기를 통해 Master/Slave 서버 선택을 유도한다.
 3. 리스트를 순환하면서 Slave 서버를 선택하도록해서, Slave 서버 부하를 분산시킨다.
@@ -473,6 +472,21 @@ TransactionManager가 트랜잭션을 식별하면 DataSource의 커넥션을 �
 5. JPA가 사용할 EntityManagerFactory를 수동으로 설정한다.
 6. JPA가 사용할 TransactionManager를 수동으로 설정한다.
 7. 서비스로직 메서드마다 datasource가 바뀌어야하므로, `LazyConnectionDataSourceProxy`를 통해 proxy datasource를 연결하도록 설정한다.
+
+### Master DataSource는 왜 컬렉션으로 관리하지 않는가?
+현재 글에서 구성된 Master:Slave 는 1:N으로, Master 서버가 1개인 상황을 가정하고 Slave는 컬렉션으로 관리하는 형태의 Replication이 구성되어 있다. 이 때 ‘왜 Master는 1개여야 하지? Master도 여러개 준비하고 컬렉션으로 관리하면 안되나?’ 라는 생각이 들었고, 아래 그림과 같이 Master와 Master 간에도 서로 복제 관계를 가지는 것을 생각했다.
+
+![image](https://user-images.githubusercontent.com/37354145/138393560-3d6fa33c-53f4-4cc3-8c9e-cd338c63bf3c.png)
+
+그러나 이 생각에 대해 우테코 질문 채널에 크루들의 의견을 물어보니, 완태가 아래와 같은 이야기와 함께 링크를 공유해주었다.
+
+> https://bcho.tistory.com/1062  
+> "Slave에서 처럼 binlog를 사용해서 data를 주고 받으면 data gap이 발생하기 때문에, Master끼리 data동기화를 하는 데에 data 불일치성이 발생할 수 있을듯 뇌피셜 팡팡!"
+
+완태가 공유해준 링크의 글을 읽다보니, 내가 Master와 Master 간 복제 관계를 통해 해결하고자 했던 문제는 사실 Replication보다는 클러스터링을 통해 해결하는 것이 더 잘 어울리는 것 같았고, Replication을 통해서는 Master-Slave를 1:N 관계로 만드는 것으로 마무리 하기로 했다.
+
+![image](https://user-images.githubusercontent.com/37354145/138393572-358d98d6-f937-43f9-877d-9a35918b04df.png)
+
 
 <br>
 
