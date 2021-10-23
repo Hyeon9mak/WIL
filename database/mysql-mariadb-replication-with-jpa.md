@@ -165,7 +165,7 @@ mysql> START slave;
 Slave 서버는 Master 서버가 실행한 쿼리를 읽었다가 에러를 일으키고 replication 수행을 중지하게 된다.
 (Master 서버의 상태를 복제하는것이 아닌, Master 서버가 수행한 쿼리를 따라서 수행하기 때문)
 
-이럴 땐 `mysqludump`를 이용해서 Master 서버의 스키마를 덤핑한 다음, Slave 서버 쪽에 적용해준 후
+이럴 땐 `mysqldump`를 이용해서 Master 서버의 스키마를 덤핑한 다음, Slave 서버 쪽에 적용해준 후
 Slave-Master 서버 연결 설정을 다시 진행해보자.
 
 ```
@@ -185,7 +185,7 @@ $ sudo mysql -u root -p {스키마 이름} < {덤프 파일명}.sql
 spring:
   datasource:
     driver-class-name: org.mariadb.jdbc.Driver
-    url: jdbc:mariadb://localhost:53306/babble
+    url: jdbc:mariadb://{DB 서버 IP}:{DB 서버 포트번호}/{DB 스키마}
     username: {계정명}
     password: {비밀번호}
 ```
@@ -200,17 +200,17 @@ spring:
 # 어떤 양식을 이용하던지 본인 자유
   datasource:
     driver-class-name: org.mariadb.jdbc.Driver
-    url: jdbc:mariadb://127.0.0.1:53306/babble
-    username: root
-    password: masterpw
+    url: jdbc:mariadb://{Master DB 서버 IP}:{Master DB 서버 포트번호}/{DB 스키마}
+    username: {Master DB 계정 이름}
+    password: {Master DB 계정 비밀번호}
 
     slaves:
       slave1:
         name: slave1
         driver-class-name: org.mariadb.jdbc.Driver
-        url: jdbc:mariadb://127.0.0.1:63306/babble
-        username: root
-        password: slavepw
+        url: jdbc:mariadb://{Slave DB 서버 IP}:{Slave DB 서버 포트번호}/{DB 스키마}
+        username: {Slave DB 계정 이름}
+        password: {Slave DB 계정 비밀번호}
 ```
 
 또한 자동 등록 기능을 이용하지 않기 때문에 hiernate 설정도 수동 등록해주어야 한다.
@@ -221,17 +221,17 @@ spring:
 # 어떤 양식을 이용하던지 본인 자유
   datasource:
     driver-class-name: org.mariadb.jdbc.Driver
-    url: jdbc:mariadb://127.0.0.1:53306/babble
-    username: root
-    password: masterpw
+    url: jdbc:mariadb://{Master DB 서버 IP}:{Master DB 서버 포트번호}/{DB 스키마}
+    username: {Master DB 계정 이름}
+    password: {Master DB 계정 비밀번호}
 
     slaves:
       slave1:
         name: slave1
         driver-class-name: org.mariadb.jdbc.Driver
-        url: jdbc:mariadb://127.0.0.1:63306/babble
-        username: root
-        password: slavepw
+        url: jdbc:mariadb://{Slave DB 서버 IP}:{Slave DB 서버 포트번호}/{DB 스키마}
+        username: {Slave DB 계정 이름}
+        password: {Slave DB 계정 비밀번호}
 
 # 여기부턴 JPA가 읽고 해석하므로 자유 아님
   jpa:
@@ -426,7 +426,7 @@ public class ReplicationDataSourceConfig {
     public LocalContainerEntityManagerFactoryBean entityManagerFactory() {
         EntityManagerFactoryBuilder entityManagerFactoryBuilder = createEntityManagerFactoryBuilder(jpaProperties);
         return entityManagerFactoryBuilder.dataSource(dataSource())
-            .packages("gg.babble.babble")
+            .packages("{프로젝트 패키지 경로 ex) gg.babble.babble}")
             .build();
     }
 
