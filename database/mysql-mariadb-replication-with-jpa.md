@@ -177,6 +177,10 @@ $ mysqldump -u {DB 계정 이름} -p {덤프할 스키마 이름} > {덤프 파�
 $ sudo mysql -u root -p {스키마 이름} < {덤프 파일명}.sql
 ```
 
+![image](https://user-images.githubusercontent.com/37354145/138583355-409c48ac-bce8-4a1d-bb23-6570cc0cee02.png)
+![image](https://user-images.githubusercontent.com/37354145/138583357-2d3a691e-2779-4a78-ba36-625db212fbd1.png)
+![image](https://user-images.githubusercontent.com/37354145/138583361-059a75ba-4c48-4081-a420-36f3ea6b6c1f.png)
+
 <br>
 
 ## Springboot Datasource 설정
