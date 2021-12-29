@@ -322,3 +322,258 @@ public void addMember(Member member) {
 - 비즈니스 로직을 기준으로 연관관계의 주인을 선택하지마라.
     - 연관관계의 주인은 외래 키의 위치를 기준으로 정해야한다.
     - '좀 애매한데...?' 하면서 헷갈린다 연관관계 편의 메서드를 활용해라.
+
+<br>
+
+## 다대일(1:N)
+### 단방향
+- 가장 많이 사용하는 연관관계!
+- **다대일**의 반대는 **일대다**
+
+### 양방향
+- 외래 키가 있는 쪽이 연관관계의 주인
+- 양쪽을 서로 참조하도록 개발
+
+<br>
+
+## 일대다(N:1)
+> **"저는 이 모델은 권장하지 않아요."**  
+> 김영한님께서 일대다 매핑 모델을 권장하지 않는다고 하셨다.
+> 그러나 이는 어디까지나 연관관계 매핑에 있어서지,
+> 비즈니스 로직 상 조회를 위해서나
+> 도메인간 의존성을 분리할 때 분명히 이를 사용할 일이 생김을 경험했다.
+
+### 단방향
+- 일(1)이 연관관계의 주인
+- 그러나 데이터베이스 테이블에는 여전히 다(N)쪽에 외래 키가 있다.
+- 객체와 테이블의 차이 때문에 반대편 테이블의 외래 키를 관리하는 구조
+- `@JoinColumn`을 꼭! 명시해야함. 그렇지 않으면 중간 테이블을 하나 생성한다.
+- 일대다 단방향 매핑을 써야할거 같다면, **다대일 양방향 매핑**을 사용하자
+    - 일대다 단방향은 연관관계 관리를 위해 추가로 UPDATE 쿼리가 실행된다.
+    - 일대다 단방향은 엔티티가 관리하는 외래 키가 다른 테이블에 있어서 혼란을 초래한다.
+
+```java
+@Entity
+public class Team {
+    
+    @Id @GeneratedValue
+    @Column(name = "TEAM_ID")
+    private Long id;
+    
+    @OneToMany
+    @JoinColumn(name = "TEAM_ID") // 조인할 컬럼을 명시해준다.
+    private List<Member> members = new ArrayList<>();
+}
+```
+```java
+Member member = new Member();
+member.setUsername("member1");
+em.persist(member);
+
+Team team = new Team();
+team.setName("team1");
+team.getMembers().add(member); // 애매한 지점
+em.persist(team);
+```
+
+위 코드에서 애매한 지점이 생긴다.
+바로 일대다 단방향 매핑에 의한 연관관계 형성 부분이다.
+
+다대일 매핑의 경우 팀이 우선 생성되고 멤버가 생성되기 때문에
+팀 삽입쿼리 1회, 멤버 삽입쿼리 1회로 총 쿼리가 2회 나가게 된다.
+그러나 일대다 단방향 매핑의 경우 멤버가 우선 생성되고 팀과 연관관계를 맺는 시점에서
+멤버 테이블의 정보가 변경되어야 하기 때문에
+팀 삽입쿼리 1회, 멤버 삽입쿼리 1회, 멤버 정보 업데이트 쿼리 1회로 쿼리가 총 3회 나가게 된다.
+(성능상 큰 차이는 없지만, 어쨌거나 그게 쌓이면 손해는 손해가 될 것이다.)
+
+성능보다 더 큰 문제점은, 실무에서 다루는 테이블이 한 두개가 아니다. 
+그런데 본인이 조작한 테이블(팀)이 아닌 다른 테이블(멤버)에 영향을 주는 쿼리가 나가는 걸 보면
+개발 과정에서 혼란을 줄 수 있다.
+
+### 양방향
+- 공식적으로 존재하는 매핑 방법은 아니다.
+- 다(N) 쪽에 `@JoinColumn(insertable=false, updatable=false)` 를 이용하는 방법
+    - 읽기 전용 필드를 강제하는 것
+- **이럴거면 다대일 양방향을 사용하자!**
+
+```java
+@Entity
+public class Member {
+    
+    @Id @GeneratedValue
+    @Column(name = "MEMBER_ID")
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(insertable = false, updatable = false)
+    private Team team;
+}
+```
+
+이 방법을 이용하면 JPA가 연관관계의 주인은 일(1)로 두면서,
+다(N)는 읽기 작업만 수행이 가능하도록 한다.
+
+<br>
+
+## 일대일(1:1)
+- 일대일 관계는 반대도 일대일
+- 주 테이블이나 대상 테이블 중에 외래 키 선택 가능
+    - 주 테이블에 외래 키
+    - 대상 테이블에 외래 키
+- 외래 키에 데이터베이스 유니크(UNIQ) 제약조건이 추가되어야 한다!
+
+### 단방향
+- 다대일 단방향 매핑과 비슷하다!
+
+```java
+@Entity
+public class Mamber {
+
+    @Id @GeneratedValue
+    @Column(name = "MEMBER_ID")
+    private Long id;
+
+    @OneToOne
+    @JoinColumn(name = "LOCKER_ID")
+    private Locker locker;
+}
+```
+
+### 양방향
+- 다대일 양방향 매핑과 비슷하다!
+- 다대일 양방향 매핑처럼 외래 키가 있는 곳이 연관관계의 주인
+- 반대편은 mappedBy 적용
+
+```java
+@Entity
+public class Locker {
+
+    @Id @GeneratedValue
+    @Column(name = "LOCKER_ID")
+    private Long id;
+
+    @OneToOne(mappedBy = "locker")
+    private Member member;
+}
+```
+
+그렇다면 락커에 외래키를 둔 상태에서 멤버를 연관관계의 주인으로 삼을 수 있을까?
+**불가능하다.** 애초에 지원 자체를 하지 않는다. 원한다면 양방향 매핑으로 풀어내야한다.
+
+또한 일대일 연관관계 매핑에서는 딜레마가 생길 수 있다.
+
+- 주 테이블에 외래 키
+    - 주 객체가 대상 객체의 참조를 가지는 것처럼,
+      주 테이블에 외래 키를 두고 대상 테이블을 찾음
+    - 객체지향 개발자가 선호하는 방식
+    - JPA 매핑이 편리하다.
+    - 장점: 주 테이블만 조회해도 대상 테이블에 데이터가 존재하는지 확인 가능
+    - 단점: 컬럼에 NULL을 허용해야 한다.
+- 대상 테이블에 외래 키
+    - 대상 테이블에 외래 키가 존재
+    - 전통적인 데이트베이스 개발자가 선호
+    - 장점: 주 테이블과 대상 테이블을 일대일에서 일대다 관계로 변경할 때 테이블 구조 유지
+    - 단점: 프록시 기능의 한계로 지연 로딩을 설정해도 항상 즉시 로딩이 일어남
+
+외래 키를 가지는 테이블이 이미 정해져있을 때 비즈니스 로직이 변경되어 
+일대일에서 다대일로 변경되는 경우 외래 키의 위치가 문제가 될 수 있다.
+많은 자료를 참고하여 보통 어떤 테이블에 외래 키를 두는게 성능, 유지보수면에서 
+유리할지 고민해 본 후 외래 키의 주인을 정하는 것이 좋겠다.
+
+<br>
+
+## 다대다(N:M)
+- 관계형 데이터베이스는 정규화된 테이블 2개로 다대다 관계를 표현할 수 없다.
+- 연결 테이블을 추가해서 일대다, 다대일 관계로 풀어내야 한다.
+- 객체는 컬렉션을 사용해서 객체 2개로 다대다 관계 가능
+- `@ManyToMany` 사용
+- `@JoinTable`로 연결 테이블 지정
+- 단방향, 양방향 모두 가능하다.
+
+### 단방향
+```java
+@Entity
+public class Mamber {
+
+    @Id @GeneratedValue
+    @Column(name = "MEMBER_ID")
+    private Long id;
+
+    @ManyToMany
+    @JoinTable(name = "MEMBER_PRODUCT")
+    private List<Product> products = new ArrayList<>();
+}
+```
+
+`@JoinTable` 어노테이션을 이용해서 중간테이블 이름을 지정해주는 경우 
+JPA가 자동으로 중간테이블을 해당 이름으로 생성해서 관리해준다.
+
+### 양방향
+```java
+@Entity
+public class Product {
+
+    @Id @GeneratedValue
+    private Long id;
+
+    @ManyToMany(mappedBy = "products")
+    private List<Member> members = new ArrayList<>();
+}
+```
+
+### 다대다 매핑의 한계
+실무에서는 사용하지 않는 걸 권장한다. 연결 테이블이 단순히 연결만 하고 끝나지 않는다.
+중간 테이블에는 다른 별도의 정보를 포함시킬 수 없이 딱 매핑 정보만 포함되며,
+중간 테이블에 의존한 쿼리가 만들어지기 때문에 관리가 어렵다.
+
+이 때문에 다대다 매핑의 한계를 극복하기 위해서 중간 테이블에 해당하는 엔티티를 하나 생성하여
+다대일-일대다 관계를 형성하기를 권장한다.
+
+```java
+@Entity
+public class MemberProduct {
+
+    @Id @GeneratedValue
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "MEMBER_ID")
+    private Member member;
+
+    @ManyToOne
+    @JoinColumn(name = "PRODUCT_ID")
+    private Product product;
+}
+```
+```java
+@Entity
+public class Mamber {
+
+    @Id @GeneratedValue
+    @Column(name = "MEMBER_ID")
+    private Long id;
+
+    @OneToMany(mappedBy = "member")
+    private List<MemberProduct> memberProducts = new ArrayList<>();
+}
+```
+```java
+@Entity
+public class Product {
+
+    @Id @GeneratedValue
+    private Long id;
+
+    @OneToMany(mappedBy = "product")
+    private List<MemberProduct> memberProducts = new ArrayList<>();
+}
+```
+
+이렇게 될 경우 MemberProduct 엔티티에 추가적인 필드(컬럼)을 명시하고 
+사용할 수 있다는 장점도 생긴다. 또, MemberProduct라는 이름을 
+다른 더 의미있는 이름으로 사용할 수도 있다.
+
+> 또 강의에서 김영한님이 중간 테이블의 제약조건을 양측 테이블의 PK 2개를 묶어서 
+> 하나의 PK로 사용하는 것보다, 별도의 PK를 가지고 양측 테이블의 PK들을 
+> FK로 가지는 것이 훨씬 더 유연했다는 말씀을 남기셨다.
+> PK는 최대한 비즈니스적으로 의미가 없는 값을 사용하자.
