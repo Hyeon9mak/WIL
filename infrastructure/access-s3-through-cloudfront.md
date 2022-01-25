@@ -65,6 +65,13 @@ Yes use OAI 설정은 S3 bucket의 public access 설정을 CloudFront OAI를 통
 
 Yes use OAI 설정을 선택하고, Origin access identity를 방금 전 생성한 OAI로 선택해주면 CloudFront 쪽에서의 설정이 끝난다.
 
+> ![image](https://user-images.githubusercontent.com/37354145/151076115-ab36a712-9dd4-4a1b-8993-6ad97b08a2a6.png)
+> 
+> **html** 파일을 통해서 테스트를 진행하는 경우 기본값 루트 객체 설정을 확인하자.
+> 
+> - 기본값 루트 객체 설정을 해주지 않을 경우: `https://{example.url}/index.html`
+> - 기본값 루트 객체 설정을 index.html로 설정할 경우: `https://{example.url}`
+
 그러나 OAI를 만들 때 별다른 식별 값 없이 이름만으로 OAI가 생성된다. 
 '고작 이정도로 S3 bucket의 액세스 권한을 제어해도 되는걸까?' 라는 생각이 드는데, 다행히 S3 bucket 쪽에도 
 별도의 설정이 필요하다.
@@ -101,7 +108,7 @@ CloudFront와 S3 설정이 모두 완료되었을 경우 정상적으로 콘텐�
 
 <br>
 
-## ☁️ (추가설정) CloudFront - Origin Shield 설정
+## (추가설정) CloudFront - Origin Shield 설정
 
 ![무제 005](https://user-images.githubusercontent.com/37354145/125394354-86e2ef00-e3e4-11eb-8ece-41c5cdca6e77.png)
 
