@@ -161,20 +161,6 @@ data "aws_ecs_cluster" "ecs_cluster" {
 ## Terraform 코드 배포(적용)
 Terraform 으로 작성한 코드 내용을 실제 인프라 환경에 적용하는데에 3가지 단계가 소요된다.
 
-- ***.tf** 파일에 테라폼 프로바이더를 명시하고
-  `terraform init` 명령어를 수행하면 **.terraform** 디렉토리와과 
-  **.terraform.lock.hcl** 파일에 생성된다.
-- **.terraform.lock.hcl** 파일을 통해 **.terraform** 디렉토리의
-  구성 파일들을 구할 수 있으므로, 깃에는 **.terraform.lock.hcl** 파일만 체크인하고
-  **.terraform** 디렉토리는 체크인 하지 않는다.
-- [테라폼은 AWS S3에 *.tfstate 파일을 업로드하는 것으로 상태를 관리한다.](https://blog.outsider.ne.kr/1290)
-- [CLI AWS MFA 설정변경 자동화](https://swalloow.github.io/aws-cli-mfa) 를 통해서 valid credential sources
-  에러를 회피해야 한다.
-  - ~/.aws 디렉토리는 `$ aws configure` 명령어를 실행시켜면 만들어진다.
-  - `AWS IAM-사용자-보안자격증명-액세스 키 만들기`를 통해 `$ aws configure`에 대입할 키를 생성한다.
-
----
-
 - `$ terraform init`: Terraform 명령어 사용을 위한 설정 진행. 최초에 입력하는 명령어.
 - `$ terraform plan`: 코드 실행시 만들어질 결과 예측. 가장 많이, 자주 활용한다.
 - `$ terraform apply`: 실제 인프라 환경에 변경사항을 적용.
