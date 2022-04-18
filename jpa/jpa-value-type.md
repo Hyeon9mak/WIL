@@ -221,3 +221,180 @@ member.setHomeAddress(newAddress);
 <br>
 
 ## 값 타입 컬렉션
+
+> 말 그대로 값 타입을 컬렉션에 담아서 사용하는 것을 의미
+
+엔티티가 필드로 컬렉션에 담긴 값 타입을 가지고 있다면, 데이터베이스 테이블로 만들 때 어떻게 해야할까?
+관계형 데이터베이스는 내부적으로 컬렉션을 필드 하나에 담아낼 능력이 없다. (JSON 제외)
+결국 1:N 개념으로 풀어내게 된다.
+
+<img width="888" alt="image" src="https://user-images.githubusercontent.com/37354145/163736216-c8de8c85-0d00-4998-a1ad-39635cf33ae0.png">
+
+- 값 타입 컬렉션은 값 타입을 하나 이상 저장할 때 사용한다.
+- `@ElementCollection`, `@CollectionTable`을 사용한다.
+- 데이터베이스는 컬렉션을 같은 테이블에 저장할 수 없다.
+    - 1:N로 풀어서 별도의 테이블을 만들어야한다.
+- 컬렉션을 저장하기 위한 별도의 테이블이 필요하다.
+- 값 타입 컬렉션도 지연 로딩 전략을 사용한다.
+- 값 타입 컬렉션은 영속성 전이(Cascade) + 고아객체 제거 기능을 필수로 가진다.
+
+```java
+@Entity
+public class Member {
+
+    @Id
+    @GeneratedValue
+    @Column(name = "MEMBER_ID")
+    private Long id;
+
+    @ElementCollection
+    @CollectionTable(
+        name = "FAVOIRATE_FOOD",
+        joinColumns = @JoinColumn(name = "MEMBER_ID")
+    )
+    @Column(name = "FOOD_NAME")
+    private Set<String> favoriateFoods = new HashSet<>();
+    // favoriateFood 의 경우 VO값이 String 이므로 
+    // 예외적으로 @Column(name = "FOOD_NAME")를 통해
+    // 값 지정이 가능한 상태
+
+    @Embedded
+    private Address address;
+
+    @ElementCollection
+    @CollectionTable(
+        name = "ADDRESS_HISTORY",
+        joinColumns = @JoinColumn(name = "MEMBER_ID")
+    )
+    private List<Address> addressHistory = new ArrayList<>();
+}
+```
+```
+create table Member (
+    MEMBER_ID bigint not null,
+    city varchar(255),
+    street varchar(255),
+    zipcode varchar(255),
+    primary key (MEMBER_ID)
+)
+
+create table FAVORITE_FOOD (
+    MEMBER_ID bigint not null,
+        FOOD_NAME varchar(255)
+)
+
+create table ADDRESS_HISTORY (
+    MEMBER_ID bigint not null,
+    city varchar(255),
+    street varchar(255),
+    zipcode varchar
+)
+```
+
+값 타입 컬렉션은 데이터를 조회, 저장할 때도 특이한 모습을 보여준다.
+값 타입 컬렉션은 별도의 테이블을 운영하지만, 값 타입과 똑같이 자발적인 라이프사이클을 갖지 못한다.
+(생명주기가 연관관계 대상에 의존한다.)
+즉, 아래와 같은 코드에서 `member`에 대한 persist만 진행해도
+값 타입 컬렉션의 모든 데이터들이 함께 저장된다.
+
+```java
+Member member = new Member();
+
+member.getFavoriteFoods().add("치킨");
+member.getFavoriteFoods().add("피자");
+member.getFavoriteFoods().add("햄버거");
+
+member.getAddressHistory().add(new Address("old1", "street", "1234"));
+member.getAddressHistory().add(new Address("old1", "street", "1234"));
+
+em.persist(member);
+```
+
+즉 별도로 persist, update 해줄 필요 없이 `member`를 이용하면 된다.
+
+```java
+Member findMember = em.find(Member.class, member.getId());
+```
+```
+select
+    memeber.MEMBER_ID,
+    member.city,
+    member.street,
+    member.zipcode,
+    member.USERNAME
+from
+    Member
+where
+    member.MEMBER_ID = ?
+```
+
+조회를 할 때도 값 타입 컬렉션은 지연로딩이 이루어진다.
+때문에 사용 전까지는 쿼리를 내보내지 않는다.
+컬렉션 전체를 조회할 때는 쿼리 한번에 원소 하나씩이 아닌 전체를 조회 해올 수 있다.
+(`MEMBER_ID = ?`를 기준으로 가져오기 때문에)
+
+```java
+List<Address> addressHistory = findMember.getAddressHistory();
+```
+```
+select
+    addressHistory.MEMBER_ID,
+    addressHistory.city,
+    addressHistory.street,
+    addressHistory.zipcode
+from
+    ADDRESS_HISTORY
+where
+    addressHistory.MEMBER_ID = ?
+```
+
+주의할 점으로 값 타입은 업데이트를 원할 때 인스턴스를 아예 새로 갈아끼워야한다는 점이다.
+이 부분을 놓치지 않도록 주의하자.
+
+```java
+// 값 타입 업데이트
+findMember.getAddress().setCity("newCity"); // X 값 변경 하지마라
+findMember.setAddress(new Address("newCity", ...)) // O
+```
+
+값 타입 컬렉션은 업데이트 동작이 조금 더 특별하다. 원소 하나만 변경해도
+의존중인 ID에 해당하는 데이터를 모두 지우고 하나씩 다시 채워넣는다.
+
+```java
+// 값 타입 컬렉션 업데이트
+findMember.getFavoriteFoods().remove("치킨"); // 먼저 지우고
+findMember.getFavoriteFoods().add("한식");    // 재삽입
+```
+```
+delete from
+    ADDRESS
+where
+    MEMBER_ID = ?
+
+insert into
+    ADDRESS (MEMBER_ID, city, street, zipcode)
+values
+    (?, ?, ?, ?)
+
+insert into
+    ADDRESS (MEMBER_ID, city, street, zipcode)
+values
+    (?, ?, ?, ?)
+
+insert into
+    ADDRESS (MEMBER_ID, city, street, zipcode)
+values
+    (?, ?, ?, ?)
+```
+
+값 타입은 엔티티와 다르게 식별자(PK, ID) 개념이 없다. 때문에 값 변경 추적이 어렵다.
+값 타입 컬렉션에서 변경 사항이 발생하면 주인 엔티티와 연관된 모든 데이터를 삭제하고,
+값 타입 컬렉션에 있는 현재값을 모두 다시 저장하는 방식을 취할 수 밖에 없다.
+값 타입 컬렉션을 매핑하는 테이블은 모든 컬럼을 묶어서 기본 키를 구성해야 한다.
+(null 입력 X, 중복 저장 X)
+
+결국 이런 방식으로 관리가 굉장히 어렵기 때문에, 실무에서는 상황에 따라 **값 타입 컬렉션 대신 일대다 관계**를 고려하는 것이 좋다.
+일대다 관계를 위한 엔티티를 만들고, 영속성 전이(Cascade) + 고아 객체 제거를 사용해서 값 타입 컬렉션처럼 
+관리 포인트를 줄이고 사용하는 것이 편하다.
+
+> 값 타입 컬렉션은 정말 값이 단순하고, 값이 바뀌어도 추적할 필요가 없을 때 사용하면 좋다.
