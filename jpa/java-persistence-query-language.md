@@ -214,3 +214,117 @@ query.setParameter(1, usernameParam);
 ```
 
 > 위치 기반은 유지보수성이 떨어진다. (장애 위험도 증가.)
+
+<br>
+
+## 프로젝션(SELECT)
+- `SELECT` 절에 조회할 대상을 지정하는 것
+- 프로젝션 대상: 엔티티, 임베디드 타입, 스칼라 타입(숫자, 문자등 기본 데이터 타입)
+- 모두 `DISTINCT` 로 중복 제거가 가능하다.
+
+### `SELECT m FROM Member m`: 엔티티 프로젝션
+
+엔티티 프로젝션으로 조회해온 엔티티들은 모두 영속성 컨텍스트에 오른다.
+(그 외에는 영속성 컨텍스트로 관리되지 않는다. 그래서 별개로 엔티티 프로젝션이라는 명칭을 사용한 것.)
+
+### `SELECT m.team FROM Member m`: 엔티티 프로젝션
+이 경우 실제 쿼리는 `JOIN` 절이 나간다.
+`SELECT m.team FROM Member m` 의 경우 복잡한 `JOIN` 절을 생략하고 JPQL을 통해 간단히 표현이 가능하기 때문에 좋아보이나,
+가능하면 JPQL을 풀어서 `JOIN` 문이 드러나도록 작성하는 것이 좋다. `JOIN`문은 성능에 영향을 주는 요소가 많고, 튜닝이 가능하다.
+때문에 한눈에 `JOIN` 절이 포함됨을 드러내는 것이 좋다.
+때문에 다음과 같이 변경해서 작성하자. `SELECT t FROM Member m JOIN m.team t`
+
+### `SELECT m.address FROM Member m`: 임베디드 프로젝션
+
+엔티티와 관계없이 VO로 감싸둔 값만 깔끔하게 가져오는 것. 대신 어쨌거나 엔티티(`Member`)의 부속(`m.address`)임을 명시해야한다는 한계가 존재한다.
+
+### `SELECT m.username, m.age FROM Member m`: 스칼라 타입 프로젝션
+
+스칼라 타입을 조회하는 방법에는 여러가지 방법이 있다.
+
+1. Query 타입 조회: 타입을 명시하지 못하므로 `Object` 타입으로 조회된다. `Object`를 `Object[]`로 타입캐스팅해서 사용 가능하다.
+2. Object[] 타입 조회: `Object[]` 타입으로 조회된다.
+3. new 명령어로 조회
+  - 단순 값을 DTO로 바로 조회
+  - 순서와 타입이 일치하는 생성자가 필요하다.
+  - 전체 패키지명과 클래스명을 모두 명시해야한다.
+  - `SELECT new 패키지경로.MemberDTO(m.username, m.age) FROM Member m`
+
+> QueryDSL 에서는 패키지 경로를 모두 적어줘야하는 한계 극복!
+
+<br>
+
+## 페이징 API
+
+- JPA 는 페이징을 다음 두 API 로 추상화
+  - `setFirstResult(int startPosition)`: 조회 시작 위치 (0부터 시작)
+  - `setMaxResults(int maxResult)`: 조회할 데이터 수
+
+```java
+// 페이징 쿼리
+String jpql = "select m from Member m order by m.name desc";
+List<Member> resultList = em.createQuery(jpql, Member.class)
+    .setFirstResult(10)
+    .setMaxResults(20)
+    .getResultList();
+```
+
+> 오라클의 경우 극한의 성능튜닝을 하지 않는 이상 페이징을 위해서 3단 SELECT 쿼리를 작성하곤 한다.
+> 
+> 1. 전체 데이터를 조회하는 쿼리
+> 2. offset 만큼 데이터를 건너뛰는 쿼리
+> 3. 개수만큼 자르는 쿼리
+> 
+> 그러나 JPA 가 제공하는 페이징 API를 사용하면 어떤 DBMS 를 사용하든지 동일하게 추상화된 쿼리를 사용할 수 있다.
+
+<br>
+
+## JOIN
+
+### 내부 조인
+
+```sql
+SELECT m FROM Member m {INNER} JOIN m.team t
+```
+
+### 외부 조인
+
+```sql
+SELECT m FROM Member m LEFT {OUTER} JOIN m.team t
+```
+
+### 세타 조인
+
+연관관계가 없는 데이터를 조인하는 것. `cross join` 을 시도한다. 
+
+```sql
+SELECT COUNT(m) FROM Member m, Team t WHERE m.username = t.name
+```
+
+### JOIN ON
+
+`ON` 절을 활용한 `JOIN` (JPA 2.1부터 지원)
+
+#### 1. 조인 대상 필터링
+
+회원과 팀을 조인하면서, 팀 이름이 A인 팀만 조인
+
+```sql
+-- JPQL
+SELECT m, t FROM Member m LEFT JOIN m.team t ON t.name = 'A'
+
+-- SQL
+SELECT m.*, t.* FROM Member m LEFT JOIN Team t ON m.TEAM_ID = t.ID AND t.name = 'A'
+```
+
+#### 2. 연관관계 없는 엔티티 외부 조인
+
+(Hibernate 5.1부터) 회원의 이름과 팀의 이름이 같은 대상 외부 조인
+
+```sql
+-- JPQL
+SELECT m, t FROM Member m LEFT JOIN Team t ON m.username = t.name
+
+-- SQL
+SELECT m.*, t.* FROM Member m LEFT JOIN Team t ON m.username = t.name
+```
