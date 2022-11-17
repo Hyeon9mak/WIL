@@ -1,4 +1,4 @@
-# 객체지향 쿼리 언어
+# 객체지향 쿼리 언어 - 기본 문법
 
 ## JPA 는 다양한 쿼리를 지원
 
@@ -328,3 +328,150 @@ SELECT m, t FROM Member m LEFT JOIN Team t ON m.username = t.name
 -- SQL
 SELECT m.*, t.* FROM Member m LEFT JOIN Team t ON m.username = t.name
 ```
+
+<br>
+
+## 서브 쿼리
+
+### 서브 쿼리 - 예제
+
+```sql
+-- 나이가 평균보다 많은 회원
+select m from Member m 
+where m.age > (select avg(m2.age) from Member m2)
+```
+
+> 자세히 보면 m 과 m2 는 전혀 다르다. 서브 쿼리는 이런 식으로 완전 별개로 짜야 성능이 잘 나온다.
+
+```sql
+-- 한 건이라도 주문한 고객    
+select m from Member m
+where (select count(o) from Order o where m = o.member) > 0
+```
+
+> 이 경우엔 서브 쿼리 내부에서 외부의 m 을 그대로 사용하는데, 이런 경우 성능이 조금 느려진다.
+
+### 서브 쿼리 지원 함수
+
+- [NOT] EXISTS (subquery): 서브쿼리에 결과가 존재하면 참 
+  - ALL (subquery): 모두 만족하면 참
+  - {ANY|SOME} (subquery): 조건을 하나라도 만족하면 참
+- [NOT] IN (subquery): 서브쿼리의 결과 중 하나라도 같은 것이 있으면 참
+
+### 서브 쿼리 지원 함수 - 예제
+```sql
+-- 팀 A 소속인 회원
+select m from Member m
+where exists (select t from m.team t where t.name = '팀A')
+```
+```sql
+-- 전체 상품 각각의 재고보다 주문량이 많은 주문들
+select o from Order o
+where o.orderAmount > ALL (select p.stockAmount from Product p)
+```
+```sql
+-- 어떤 팀이든 팀에 소속된 회원
+select m from Member m
+where m.team = ANY (select t from Team t)
+```
+
+### JPA 서브 쿼리 한계
+
+- JPA 표준 스펙에서는 `WHERE`, `HAVING` 절에서만 서브 쿼리 사용 가능
+  - 하이버네이트를 사용하면 `SELECT` 절도 가능
+- `FROM` 절의 서브 쿼리는 현재 JPQL에서 불가능...
+  - `JOIN`, NATIVE QUERY, QUERY 2번 날려서 애플리케이션 레벨에서 해결 등..
+
+> 최신버전 하이버네이트(6.1 Final)에서는 지원한다!
+
+<br>
+
+## JPQL 타입 표현
+
+- 문자: `'HELLO'`, `'She''s'`
+  - `'`를 표현하고 싶을 때 `''` 로 표현하면 된다.
+- 숫자: `10L`(Long), `10D`(Double), `10F`(Float)
+- Boolean: `TRUE`, `FALSE`
+- ENUM: `jpabook.MemberType.Admin` (패키지명 포함)
+  - 그래서 직접 JPQL에 하드코딩하기보다 parameter binding 을 사용하면 좋다.
+  - 혹은 QueryDSL 사용
+- 엔티티 타입: `TYPE(m) = Member` (상속 관계에서 사용)
+  - `TYPE` 은 엔티티 타입을 비교할 때 사용한다.
+  - 쿼리 내부에서 DTYPE 을 비교한다.
+
+### JPQL 기타
+
+- SQL 과 문법이 같은 식
+- `EXISTS`, `IN`
+- `AND`, `OR`, `NOT`
+- `=`, `>`, `>=`, `<`, `<=`, `<>`
+- `BETWEEN`, `LIKE`, `IS NULL`
+
+<br>
+
+## 조건식 - CASE 식
+
+크게 기본 CASE 식과 단순 CASE 식 2가지가 존재한다.
+
+### 기본 CASE 식
+
+```sql
+SELECT
+    CASE WHEN m.age <= 10 then '학생요금'
+         WHEN m.age >= 60 then '경로요금'
+         else '일반요금'
+    END
+FROM Member m
+```
+
+### 단순 CASE 식
+
+```sql
+SELECT
+    CASE t.name
+         WHEN '팀A' then '인센티브110%'
+         WHEN '팀B' then '인센티브120%'
+         else '인센티브105%'
+    END
+FROM Team t
+```
+
+### COALESCE
+
+하나씩 조회해서 null 이 아니면 반환
+
+```sql
+-- 사용자 이름이 없으면 '이름 없는 회원'을 반환
+SELECT COALESCE(m.username, '이름 없는 회원') FROM Member m
+```
+
+### NULLIF
+
+두 값이 같으면 null 반환, 다르면 첫번째 값 반환
+
+```sql
+-- 사용자 이름이 '관리자'면 null 을 반환하고 나머지는 본인의 이름을 반환
+SELECT NULLIF(m.username, '관리자') FROM Member m
+```
+
+<br>
+
+## JPQL 기본 함수
+
+###  JPQL 에서 제공하는 기본 함수
+
+- 문자: `CONCAT`, `SUBSTRING`, `TRIM`, `LOWER`, `UPPER`, `LENGTH`, `LOCATE`
+- 숫자: `ABS`, `SQRT`, `MOD`, `SIZE`(연관관계 컬렉션 크기), `INDEX`(`@OrderColumn` 사용할 때, JPA 지원)
+- 날짜: `CURRENT_DATE`, `CURRENT_TIME`, `CURRENT_TIMESTAMP`
+- 조건: `COALESCE`, `NULLIF`
+
+### 사용자 정의 함수
+
+- 하이버네이트는 사용 전 방언에 추가해야 한다.
+  - 사용하는 DB 방언을 상속받고, 사용자 정의 함수를 등록한다.
+
+```sql
+SELECT FUNCTION('group_concat', i.name) FROM Item i
+```
+
+> 다행히도 하이버네이트가 `this.registerFunction(...)` DBMS 별 함수를 대부분 등록해놓는다!
