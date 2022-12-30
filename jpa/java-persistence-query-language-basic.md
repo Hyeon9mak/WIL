@@ -467,11 +467,29 @@ SELECT NULLIF(m.username, '관리자') FROM Member m
 
 ### 사용자 정의 함수
 
+> 다행히도 하이버네이트가 `this.registerFunction(...)` DBMS 별 함수를 대부분 등록해놓는다!
+> 물론 이것들은 모두 DB 종속적인 함수들. DBMS 를 변경하면 기존 사용자 정의 함수를 사용하지 못할 가능성이 높다.
+
 - 하이버네이트는 사용 전 방언에 추가해야 한다.
   - 사용하는 DB 방언을 상속받고, 사용자 정의 함수를 등록한다.
+
+```java
+public class MyH2Dialect extends H2Dialect {
+    
+    public MyH2Dialet() {
+        registerFunction("group_concat", new StandardSQLFunction("group_concat", StandardBasicTypes.STRING));
+    }
+}
+```
+
+> 사용자 정의 함수 등록 방법을 외울 순 없고, `H2Dialect` 클래스를 확인해보면 등록 방법을 대충 유추할 수 있다.
+
+정의가 끝나면 db source property 방언 설정에 제공되는 설정 대신 MyH2Dialet 로 설정을 바꿔주면 된다.
+
+```xml
+<property name="hibernate.dialect" value="dialect.MyH2Dialect"/>
+```
 
 ```sql
 SELECT FUNCTION('group_concat', i.name) FROM Item i
 ```
-
-> 다행히도 하이버네이트가 `this.registerFunction(...)` DBMS 별 함수를 대부분 등록해놓는다!
