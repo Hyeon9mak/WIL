@@ -192,11 +192,23 @@ WHERE T.NAME = 'TeamA'
   - Fetch Join 대상에게 별칭을 부여 후 그래프탐색을 추가로 시도하는 경우, 데이터가 누락될 수도 있다.
   - 하이버네이트는 가능하나, 가급적 사용하지 마라.
 
+실제로 Team 객체는 Member 를 10명 갖고 있는데, Member 를 3명만 갖고 있는 것처럼 조회된다.
+가장 중요한 건 Team 객체를 사용할 때 OneToMany 필드의 Member 가 10명으로 느껴져서
+10명에 대한 무언가를 진행할 수 있는데, 실제로는 3명에 대해서만 적용된다.
+비즈니스 로직이 꼬인다.
+
+CasCade 옵션을 사용하면 데이터가 지워지는 등의 문제가 생길 수도 있다.
+
+객체 그래프라는 건 기본적으로 **연관된 모든 데이터** 를 가져와야만 한다.
+특정 개수만 가져오고 싶다면 연관관계 그래프 탐색을 하지 말고, 별개의 조회 쿼리를 날려라.
+
 ```sql
 # 이런거 하지 말라는 뜻
-# 실제로 Team 객체는 Member 를 10명 갖고 있는데,
-# Member 를 2명만 갖고 있는 것처럼 조회된다.
-# CasCade 옵션을 사용하면 데이터가 지워지는 등의 문제가 생길 수도 있다.
+SELECT t FROM Team t JOIN FETCH t.members m WHERE m.age > 10;
+```
+
+```sql
+# 이런거 하지 말라는 뜻
 SELECT t FROM TEam t JOIN FETCH t.members m WHERE m.name = '...'
 ```
 
@@ -272,3 +284,194 @@ SELECT m FROM Member m WHERE m.team_id IN ( ?, ?, ?, ...)
 > (네이티브 쿼리를 작성하면 서비스 코드를 또 손봐야하고 그런게 어려운 시점)
 > Fetch Join, BatchSize 조절 등을 통해 코드 레벨에서 간편하게 성능 최적화 효과를 얻는 것.
 > 그게 Fetch Join 의 의의인거 같다.
+
+<br>
+
+## JPQL - 다형성 쿼리
+
+![](https://i.imgur.com/x0jHzr7.png)
+
+### 조회 대상을 특정 자식으로 한정할 수 있다.
+
+`Item` 중에 `Book`, `Movie` 를 조회해라
+
+```sql
+# JPQL
+SELECT i FROM Item i WHERE TYPE(i) IN (Book, Movie)
+
+# 실제 날아가는 SQL
+SELECT i.* FROM i WHERE i.DTYPE in ('B', 'M')
+```
+
+### TREAT (JPA2.1)
+
+- 자바의 타입 캐스팅과 유사
+- 상속 구조에서 부모 타입을 특정 자식 타입으로 다룰 때 사용 (다운 캐스팅)
+- FROM, WHERE, SELECT(하이버네이트 지원) 사용
+
+부모인 Item 과 자식인 Book
+
+```sql
+# JPQL
+SELECT i FROM Item i WHERE TREAT(i AS Book).author = 'kim'
+
+# 실제 날아가는 SQL
+SELECT i.* FROM Item i WHERE i.DTYPE = 'B' AND i.author = 'kim'
+```
+
+<br>
+
+## 엔티티 직접 사용
+
+- JPQL 에서 엔티티를 직접 사용하면 SQL 에서 해당 엔티티의 기본 키 값을 사용
+
+> 엔티티를 식별하는 건 특정 대상이 아니라 PK 이므로.. 어찌보면 너무 당연한 이야기.
+> 엔티티와 도메인 모델에 대한 차이를 정확하게 알아야하는 이유이기도 하다.
+
+#### 개수 조회
+
+```sql
+# JPQL
+SELECT count(m.id) FROM Member m
+SELECT count(m) FROM Member m
+                
+# 실제 날아가는 SQL
+SELECT count(m.id) as cnt FROM Member m
+``` 
+
+#### where 절
+
+```sql
+# JPQL
+SELECT m FROM Member m WHERE m = :member;
+SELECT m FROM Member m WHERE m.id = :memberId;
+
+# 실제 날아가는 SQL
+SELECT m.* FROM Member m WHERE m.id = ?
+```
+
+#### 외래 키 값
+
+```sql
+# JPQL
+SELECT m FROM Member m WHERE m.team = :team;
+SELECT m FROM Member m WHERE m.team.id = :teamId;
+
+# 실제 날아가는 SQL
+SELECT m.* FROM Member m WHERE m.team_id = ?
+```
+
+<br>
+
+## Named 쿼리
+
+- 미리 정의해서 이름을 부여해두고 사용하는 JPQL
+- 정적 쿼리 (동적으로 뭔가 더할 수 없음)
+- 어노테이션, XML에 정의
+- 애플리케이션 로딩 시점에 초기화 후 재사용
+  - 애플리케이션이 뜰 때 JPQL 이 해당 내용을 SQL 로 만들어서 캐싱을 해두게 된다.
+  - **계속해서 쓰이게 되는 중복 쿼리에 대해 캐싱이 진행되는 것.**
+- **애플리케이션 로딩 시점에 쿼리를 검증**
+  - 애플리케이션 로딩 시점에 문법 에러를 잡아낼 수 있다.
+
+> `@NamedQuery` 가 Spring Data Jpa 의 `@Query` 와 동일하다.
+> 게다가 `@Query` 는 동적 쿼리를 작성할 수 있지만, `@NamedQuery` 는 정적 쿼리만 작성할 수 있다.
+
+```java
+@Entity
+@NamedQuery(
+        name = "Member.findByUsername",
+        query = "SELECT m FROM Member m WHERE m.username = :username"
+)
+```
+```java
+List<Member> resultList = em.createNamedQuery("Member.findByUsername", Member.class)
+        .setParameter("username", "member1")
+        .getResultList();
+```
+
+### XML 에 정의하기
+
+- xml 이 어노테이션보다 우선권을 가진다.
+- 파일로 나눠서 관리할 수 있기 떄문에, 운영환경마다 조금씩 다른 쿼리를 작성해줄 수도 있다.
+
+```xml
+// [META-INF/persistence.xml]
+<persistence-unit name="jpabook" >
+    <mapping-file>META-INF/ormMember.xml</mapping-file>
+
+// [META-INF/ormMember.xml]
+<?xmi version="1.0" encoding="UTF-8"?>
+<entity-mappings xmlns="http://xmlns.jcp.org/xml/ns/persistence/orm" version="2.1">
+    <named-query name= "Member.findByUsername">
+        <query><![CDATA[
+            select m from Member m where m.username = :username
+        ]]></query>
+    </named-query>
+
+    <named-native-query name="Member.count">
+        <query>
+            select count(m) from Member m
+        </query>
+    </named-native-query>
+</entity-mappings>
+```
+
+<br>
+
+## 벌크 연산
+
+> 사실 JPA 가 벌크연산 보다는 실시간성, 단건 단건에 대한 작업에 최적화가 되어있긴 함.
+
+- 재고가 10개 미만인 모든 상품의 가격을 10% 상승시키려면?
+- JPA 변경 감지 기능으로 실행하려면 너무 많은 SQL 실행
+    1. 재고가 10개 미만인 상품을 리스트로 조회한다.
+  2. 상품 엔티티의 가격을 10% 증가한다.
+  3. 트랜잭션 커밋 시점에 변경감지가 동작한다.
+- 변경된 데이터가 100건이라면 100번의 UPDATE SQL 실행
+
+이를 해결하기 위해 `executeUpdate()` 를 활용한다.
+
+```java
+String qlString = "update Product p " +
+        "set p.price = p.price * 1.1 " +
+        "where p.stockAmount < :stockAmount";
+
+int resultCount = em.createQuery(qlString)
+        .setParameter("stockAmount", 10)
+        .executeUpdate();
+```
+
+- UPDATE, DELETE 지원
+- INSERT(insert into ... select) 는 하이버네이트만 지원
+
+### 벌크 연산 주의
+
+- 벌크 연산은 영속성 컨텍스트를 무시하고 DB 에 직접 쿼리가 들어감
+- 해결방법은 처음부터 벌크 연산을 최우선으로 깔끔하게 수행하거나, 
+- 로직 중간에서 벌크 연산 수행 후 영속성 컨텍스트를 초기화한 후 다음 로직을 이어나가는 것이 좋다.
+
+```java
+int resultCount = em.createQuery("Update Member m set m.age = 20")
+        .executeUpdate();
+
+Member findMember = em.find(Member.class, member1.getId());
+// 0살이 나온다.
+```
+
+벌크 연산은 데이터베이스에 직접적으로 쿼리를 날리고,
+엔티티 매니저는 영속성 컨텍스트 (1차 캐시)에 남아있는 데이터를 조회해오므로
+데이터 정합성이 순간적으로 맞지 않는 상황이 존재한다.
+
+```java
+int resultCount = em.createQuery("Update Member m set m.age = 20")
+        .executeUpdate();
+em.clear();
+Member findMember = em.find(Member.class, member1.getId());
+// 20살이 나온다.
+```
+
+영속성 컨텍스트를 비우고 다시 조회해서 채우면 정상 동작하게 된다.
+
+> spring data jpa 의 `@Modifying` 와 동일하다.
+> https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#jpa.modifying-queries
