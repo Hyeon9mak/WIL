@@ -1,3 +1,5 @@
+https://bottom-to-top.tistory.com/57
+
 ## circuit breaker basic concept
 
 ![](https://i.imgur.com/D68Iwqg.png)
