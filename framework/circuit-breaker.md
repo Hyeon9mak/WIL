@@ -55,3 +55,15 @@ circuit breaker 는 자신의 상태를 `AtomicReference` 에 저장해서 원�
 그러나 주의할 점은 sliding window size 와 동시에 수행할 수 있는 스레드의 개수는 절대 무관하다는 것이다.
 가령 sliding window size 10 은 10개 스레드만 동시에 작업이 가능하다는 뜻이 아니다. [circuit breaker 에 영향을 받는 동시 스레드 개수를 제한하려면 bulkhead 를 추가로 활용하자.](https://resilience4j.readme.io/docs/bulkhead)
 
+![](https://i.imgur.com/JwIVrsP.png)
+
+
+![](https://i.imgur.com/PrrdeeR.png)
+
+![](https://i.imgur.com/EYX1yh7.png)
+
+![](https://i.imgur.com/7eh5W1J.png)
+
+![](https://i.imgur.com/a3DpYmD.png)
+
+![](https://i.imgur.com/qgJsDh2.png)
