@@ -17,7 +17,96 @@
 - [SpringBoot - Kotlin에서 @Valid가 동작하지 않는 원인(JSR-303, JSR-380)](https://velog.io/@lsb156/SpringBoot-Kotlin%EC%97%90%EC%84%9C-Valid%EA%B0%80-%EB%8F%99%EC%9E%91%ED%95%98%EC%A7%80-%EC%95%8A%EB%8A%94-%EC%9B%90%EC%9D%B8JSR-303-JSR-380)
 - [Coroutine IO Dispatcher의 Thread number가 최대 Thread 갯수를 초과하는 이슈](https://sandn.tistory.com/112)
 - [쓰레드풀 과 ForkJoinPool](https://hamait.tistory.com/612)
+- [RDS 성능 개선 도우미](https://docs.aws.amazon.com/ko_kr/AmazonRDS/latest/UserGuide/USER_PerfInsights.Overview.html)
 
+## intellij 에서 gradle 프로젝트를 정상적으로 찾지 못할 때
+- build.gradle 에서 커넥 확인
+- 
+
+## ES 몇 가지..
+- es 는 샤드를 기반으로 스코어링을 한다.
+	- 때문에 특정 샤드에 몰리면 스코어링이 어려워진다.
+	- 검색 시간이 느려진다는 뜻.
+- 루씬 인덱스가 너무 많아지면 검색 히트율이 많이 낮아질 수 있다.
+
+## query IN (null)
+- 쿼리의 IN 혹은 NOT IN 은 null 이 포함되면 예상 외의 결과를 반환한다.
+- JPA 는 파라미터가 null 일 때 이것을 걸러주지 못하고 자동적으로 `IN (null)` 쿼리를 생성한다.
+- 이에 대한 대응책으로 queryDSL 로 직접 쿼리를 작성하거나, 별개 쿼리를 2벌 준비해서 사용하자.
+
+## sub query NOT IN
+- https://choihyuunmin.tistory.com/93
+- 서브쿼리의 IN 은 하나라도 일치하면 반환
+- 서브쿼리의 NOT IN 은 "모든 요소들과 일치하지 않는 값"을 체크하여 반환한다.
+	- 만약 비교 컬럼이 nullable 하다면 예상외의 결과가 나올 수 있다.
+	- null 은 무조건적으로 false 를 내뱉기 때문
+
+## 모듈별 코드 옮기기 트러블 슈팅
+### 겪은 문제
+- A 모듈에서 F 모듈 configuration bean scan 에 실패함
+- A 와 비슷한 형상의 B 모듈에서는 문제가 발생하지 않음
+
+### 원인
+- B 모듈과 F 모듈은 패키지 구조가 완전히 동일함
+	- 때문에 B 모듈 Main 이 F 모듈 내부 bean scan 을 모두 성공
+- A 모듈은 F 모듈과 패키지 구조가 다름
+	- 때문에 실패
+
+### 해결방법
+- F 모듈 내부 bean scan 범위를 명시해주는 Config 추가
+- 또 다른 해결 방법으로는 B 모듈 Main 에 탐색 패키지 명칭을 상위로 올리면 되는데, 이건 딱히 좋은 방법이 아닌 것 같음.
+
+## presignedURL
+- "우리가 어떠한 경로에 이미지를 올릴거야" 클라이언트에 올리라고 응답을 준다.
+- 경로랑 파일명을 내가 이미 알고 있으니까, 거기에 등록되었을거라고 알아서 저장되도록
+- 일단 컨텐츠 ID 를 0으로 저장한 후에 다시 변경하는 것으로.....
+
+## mongo db and search
+- mongo 검색 히트률이 낮아서 보통 별개의 검색용 서버를 둔다.
+- 그리고 mongo 는 read model 만 갖고 있는다.
+	- 검색 서버를 통해 ID 를 가져온다음, ID 로 mongo 에 질의해서 read model 조회
+
+## @Transactional(propagation = Propagation.REQUIRES_NEW)`
+- propagation requires new 는 새로운 스레드를 생성하는 것이 아니다.
+- 하나의 스레드에서 새로운 커넥션을 얻는 것 뿐이다.
+- 때문에 자식 트랜잭션에서 예외가 발생했을 때 부모측에서 try-catch 로 예외처리를 해주지 않으면 부모 트랜잭션까지 모두 롤백된다.
+- 부모는 롤백되지 않고 자식만 롤백을 원할 경우 try-catch 로 예외를 관리해주어야 한다.
+
+## spring actuator
+- [spring actuator 는 기본적으로 자신이 의존중인 클라이언트의 서버 상태까지 모두 확인하여, 클라이언트 서버 중 하나라도 unhealth 상태면 unhealth 를 반환한다.](https://toss.tech/article/how-to-work-health-check-in-spring-boot-actuator)
+- 이를 해소하기 위해선 spring actuator 관련 상태를 모두 비활성화하고, 커스텀하게 헬스체크 상태를 반환해주는 것이 좋음.
+- 간단한 방법으로는 spring actuator 라이브러리 의존 자체를 제거하고, custom health check controller 구현
+```kotlin
+@RestController
+fun HealthCheckController {
+
+	@GetMapping("/actuator/health")
+	fun healthCheck(): String {
+		return "OK"
+	}
+	
+	@GetMapping("/actuator/info")
+	fun healthCheck(): String {
+		return "OK"
+	}
+}
+```
+- spring actuator 의 다른 기능을 활용하면서 하는 방법으로는 Indicator 구현
+```kotlin
+@Component
+class CustomHealthIndicator : HealthIndicator {
+
+  override fun health(): Health = Health.up().build()
+}
+
+@Component
+class CustomInfoContributor : InfoContributor {
+
+  override fun contribute(builder: Info.Builder) {
+    builder.withDetail("info", "OK")
+  }
+}
+```
 
 ## ConstructorBinding
 ```kotlin
