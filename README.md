@@ -19,6 +19,13 @@
 - [쓰레드풀 과 ForkJoinPool](https://hamait.tistory.com/612)
 - [RDS 성능 개선 도우미](https://docs.aws.amazon.com/ko_kr/AmazonRDS/latest/UserGuide/USER_PerfInsights.Overview.html)
 
+## PostgreSQL major upgrade 시 챙겨야할 주의점
+
+> When upgrading major versions pg_upgrade does not copy existing statistics over to the new version of the DB. It is recommended to run VACUUM ANALYZE or at least ANALYZE after pg_upgrade.
+
+- postgresql major upgrade 이후에는 vaccum 등을 이용해서 통계 테이블 또한 복제를 해주어야만한다.
+- 그렇지 않을 경우 대단히 속도가 저하된다.
+
 ## RDB 테이블 정규화는 왜 중요한가?
 - 각 테이블 컬럼이 어떤 역할을 수행하는지 한 눈에 확인하고 이해할 수 있다.
 	- 반대로 역정규화가 되어 있으면 각 컬럼이 어떤 시점에, 어떤 유스케이스에 활용되는지 이해하기 어렵다.
