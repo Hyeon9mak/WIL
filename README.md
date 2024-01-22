@@ -19,6 +19,52 @@
 - [쓰레드풀 과 ForkJoinPool](https://hamait.tistory.com/612)
 - [RDS 성능 개선 도우미](https://docs.aws.amazon.com/ko_kr/AmazonRDS/latest/UserGuide/USER_PerfInsights.Overview.html)
 
+## 성능 부하 발생 명령어
+
+- 특정 데몬을 실행, 중지, 재시작
+
+```
+$ systemctl
+```
+
+- yum 을 통해 프로그램을 설치할 때 추가 패키지를 받아오도록 하는 명령어
+
+```
+$ amazon-linux-extras install -y epel
+```
+
+- 부하 툴
+
+```
+$ yum install -y stress-ng
+```
+
+- CPU 부하 발생(70%)
+
+```
+$ stress-ng --cpu 1 --cpu-load 70% --timeout 10m --metrics --times --verify
+```
+
+- CPU 정보 확인
+
+```
+# CPU 정보 확인
+$ cat /proc/cpuinfo | grep name
+
+# 메모리 용량 확인
+$ cat /proc/meminfo | grep MemTotal
+
+# 프라이빗 IP 주소 확인
+$ ip -br -c addr show eth0
+
+# 퍼블릭 IP 주소 확인
+$ curl ipinfo.io/ip
+
+# 스토리지 (EBS 볼륨 확인)
+$ lsblk
+$ df -hT -t xfs
+```
+
 ## PostgreSQL major upgrade 시 챙겨야할 주의점
 
 > When upgrading major versions pg_upgrade does not copy existing statistics over to the new version of the DB. It is recommended to run VACUUM ANALYZE or at least ANALYZE after pg_upgrade.
