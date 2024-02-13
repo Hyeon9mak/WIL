@@ -19,6 +19,51 @@
 - [쓰레드풀 과 ForkJoinPool](https://hamait.tistory.com/612)
 - [RDS 성능 개선 도우미](https://docs.aws.amazon.com/ko_kr/AmazonRDS/latest/UserGuide/USER_PerfInsights.Overview.html)
 
+## `@ConfigurationProperties` 를 통해 환경변수를 불러올 때 간혹 실패하는 경우
+
+- SpringBoot 버전을 확인할 필요가 있다.
+- SPringBoot 3.0 미만 버전에서는 `@ConstructorBinding` 이 필수였다.
+
+```kotlin
+@ConstructorBinding  
+@ConfigurationProperties(prefix = "aws.s3")  
+data class AwsS3Properties(  
+  val bucket: Bucket,  
+  val mockS3: MockS3 = MockS3(),  
+) {  
+  data class Bucket(  
+    val name: String,  
+    val cloudFrontBaseUrl: String  
+  )  
+  
+  data class MockS3(  
+    val port: Int = 8111,  
+    val mockObjectDirectory: String = "s3"  
+  )  
+}
+```
+
+- SpringBoot 3.0 이상 버전에서는 생성자가 여러 개일 경우를 제외하면 `@ConstructorBinding` 을 생략할 수 있다.
+
+```kotlin
+@ConfigurationProperties(prefix = "aws.s3")  
+data class AwsS3Properties(  
+  val bucket: Bucket,  
+  val mockS3: MockS3 = MockS3(),  
+) {  
+  data class Bucket(  
+    val name: String,  
+    val cloudFrontBaseUrl: String  
+  )  
+  
+  data class MockS3(  
+    val port: Int = 8111,  
+    val mockObjectDirectory: String = "s3"  
+  )  
+}
+```
+
+추가 내용은 [https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.0.0-M2-Release-Notes](https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.0.0-M2-Release-Notes) 참고.
 ## 성능 부하 발생 명령어
 
 - 특정 데몬을 실행, 중지, 재시작
