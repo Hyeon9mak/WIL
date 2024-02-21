@@ -1,5 +1,11 @@
 # QueryDSL Join 관련
 
+## Nullable 한 연관관계를 가진 엔티티끼리의 JOIN 을 진행할 때는 JOIN 방향이 굉장히 중요하다
+
+- 특히 필터링을 이용한 SELECT 를 진행할 때는 nullable 한 값이 SELECT 대상이 될 수도 있다.
+- 무조건적으로 INNER JOIN 을 해서는 원하는 것과 다른 값이 나올 위험 존재
+- LEFT JOIN, RIGHT JOIN 방향에 따라서도 달라질 수 있다.
+
 ##  QueryDSL type cast 발생시 full table scan
 ### 문제 상황
 QueryDSL의 Query JOIN 절에 cast(타입변환)이 포함될 경우 
