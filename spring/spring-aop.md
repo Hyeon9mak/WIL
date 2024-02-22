@@ -291,3 +291,90 @@ public class BeforeAndAfterOfFruit implements Fruit {
 - `String getName()`: 호출되는 메서드의 이름 반환
 - `String toLongString()`: 호출되는 메서드를 완전하게 표현한 문장(리턴 타입, 파라미터 타입 등) 반환
 - `String toShortString()`: 호출되는 메서드를 축약해서 표현한 문장 반환
+
+<br>
+
+## AOP 는 자기 자신의 호출(내부 호출)에 응답할 수 없다.
+
+```kotlin
+@Service  
+class GetSplashesUseCase {  
+  @Cacheable(  
+    value = [CacheConstant.SPLASH],  
+    cacheManager = "ONE_DAY_CACHE_MANAGER",  
+  )  
+  fun getSplashes(): GotSplashes {  
+    return ...
+  }  
+}
+```
+
+위와 같이 `@Cacheable` 을 이용해 `GotSplashes` 응답 결과를 캐싱해두는 로직이 있다.
+
+```kotlin
+@Transactional  
+@Service  
+class UpdateSplashUseCase {  
+  fun updateSplash(command: SplashUpdateCommand): UpdatedSplash {  
+    // ...
+    clearAllCaches()
+    return updatedSplash
+  }
+  
+  @CacheEvict(value = [CacheConstant.SPLASH])  
+  fun clearAllCaches() {  
+    logger().info("clear all splash caches.")  
+  }  
+}
+```
+
+위와 같이 스플래시 업데이트 직후 내부 메서드를 호출하여 `@CacheEvict` 를 실행하면 어떤 일이 벌어질까?
+
+결론은 아무런 일도 발생하지 않는다.
+분명 public 한 메서드임에도 spring AOP 가 동작하지 않는 것이다.
+
+그 원리는 당연하게도, 자기 자신의 메서드(타겟)을 직접 호출하므로, 메서드(타겟)을 감싼 프록시를 호출할 기회를 잃어버린 것이다.
+
+![](https://i.imgur.com/dApV1cv.png)
+
+해결 방법은 크게 3가지가 있다.
+
+1. 자기 자신을 주입
+	- 이 방식을 이용하면 생성자 주입시 무한 순환참조 문제가 발생한다.
+	- 애초에 설계상으로도 좋아보이는 구조가 아니다.
+	- 이 방식은 사용하지 말자.
+2. 지연 조회
+	- 생성자 주입을 이용하지 않고 수정자 주입을 이용하는 것 (setter, autowired)
+	- 단 불필요한 spring application context 관련 코드가 많아진다.
+	- 관심사 분리 이용을 위해서 사용하는 AOP 컨셉과 어울리지 않는다.
+3. 설계 구조 변경
+	- 애초에 AOP 를 이용하는 컨셉에 맞춰서 아예 별개의 클래스로 분리하여 관리한다.
+
+### 설계 구조 변경 예시
+
+```kotlin
+@Transactional  
+@Service  
+class UpdateSplashUseCase(
+  private val splashCacheClearUseCase: SplashCacheClearUseCase,
+) {  
+  fun updateSplash(command: SplashUpdateCommand): UpdatedSplash {  
+    // ...
+    splashCacheClearUseCase.clearAllCaches()
+    return updatedSplash
+  }
+}
+
+@Service
+class SplashCacheClearUseCase {
+
+  @CacheEvict(value = [CacheConstant.SPLASH])  
+  fun clearAllCaches() {  
+    logger().info("clear all splash caches.")  
+  }  
+}
+```
+
+위와 같이 별도로 의존성을 주입 받아서 AOP 메서드를 실행시킴으로서 해결할 수 있다.
+
+![](https://i.imgur.com/isH7nYj.png)
