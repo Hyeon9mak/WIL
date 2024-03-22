@@ -19,6 +19,21 @@
 - [쓰레드풀 과 ForkJoinPool](https://hamait.tistory.com/612)
 - [RDS 성능 개선 도우미](https://docs.aws.amazon.com/ko_kr/AmazonRDS/latest/UserGuide/USER_PerfInsights.Overview.html)
 
+## argocd helm chart 에 주석을 달면 안된다.
+argocd helm chart 를 이용한 spring batch parameter 관리 중 아래와 같이 주석을 달아두었었다.
+
+```
+{{=sprig.date("20060102", sprig.dateModify("+9h", sprig.now()))}} # 금일
+```
+
+그러자 아래와 같이 sql syntax 에러가 발생했다.
+
+```
+PSQLException: ERROR: invalid input syntax for type timestamp: \"20240321 # 전 일 \"
+```
+
+argocd helm chart 파일은 주석 기호를 구분하지 못하고 곧이 곧대로 문자열을 기입한다.
+
 ## `@ConfigurationProperties` 를 통해 환경변수를 불러올 때 간혹 실패하는 경우
 
 - SpringBoot 버전을 확인할 필요가 있다.
