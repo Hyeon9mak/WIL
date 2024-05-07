@@ -19,6 +19,25 @@
 - [쓰레드풀 과 ForkJoinPool](https://hamait.tistory.com/612)
 - [RDS 성능 개선 도우미](https://docs.aws.amazon.com/ko_kr/AmazonRDS/latest/UserGuide/USER_PerfInsights.Overview.html)
 
+## gradlew 명령어는 sudo 로 만들어진 파일 편집 권한이 없다.
+
+만약 `sudo` 명령을 통해 관리자 권한으로 파일, 디렉토리를 생성한 경우 `./gradlew` 명령어를 통해 이를 편집할 수 없다.
+
+```
+$ ./gradlew clean build
+
+(clean 명령어를 통해 .build 디렉토리를 제거할 수 없음.)
+```
+
+때문에 만약 아래와 같이 `sudo ./gradlew build` 명령어 등을 통해서 디렉토리를 개설한 경우, 수동으로 디렉토리와 파일들을 제거해주어야 한다.
+
+```
+$ sudo ./gradlew clean build
+
+$ sudo rm -rf ...
+```
+
+<br>
 ## argocd helm chart 에 주석을 달면 안된다.
 argocd helm chart 를 이용한 spring batch parameter 관리 중 아래와 같이 주석을 달아두었었다.
 
