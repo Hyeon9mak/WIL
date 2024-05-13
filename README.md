@@ -19,6 +19,15 @@
 - [쓰레드풀 과 ForkJoinPool](https://hamait.tistory.com/612)
 - [RDS 성능 개선 도우미](https://docs.aws.amazon.com/ko_kr/AmazonRDS/latest/UserGuide/USER_PerfInsights.Overview.html)
 
+## `BDDMockito` 를 사용할 때 primitive type 에 대해서는 `any()` 를 사용할 수 없다.
+
+![](https://i.imgur.com/LYw57SE.png)
+
+만약 정수형일 경우?
+
+1. `anyInt()` 를 사용한다.
+2. 혹은 타입을 `Integer` 로 변환한다.
+
 ## gradlew 명령어는 sudo 로 만들어진 파일 편집 권한이 없다.
 
 만약 `sudo` 명령을 통해 관리자 권한으로 파일, 디렉토리를 생성한 경우 `./gradlew` 명령어를 통해 이를 편집할 수 없다.
