@@ -135,6 +135,13 @@ class StudentEnroller(
 
 아직 트랜잭션이 종료되지 않았음에도 INSERT Query를 던지고, findByName 에 의한 조회까지 다시 하는 걸 확인할 수 있다.
 
+> 
+
+> 트랜잭션이 종료된 후에는 최종적으로 `persistOnFlush` 가 호출된다.
+>
+> <img width="752" alt="image" src="https://github.com/user-attachments/assets/f6c08464-5f6d-4fa6-b498-8a9349b0f34f">
+
+
 <br>
 
 ## What happen in DB?
