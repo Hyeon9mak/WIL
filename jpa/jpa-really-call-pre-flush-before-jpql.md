@@ -1,4 +1,4 @@
-# JPA 는 JPQL 이 호출되기 전 정말로 flush 를 먼저 호출할까?
+# JPA 는 JPQL 을 DB 로 던지기 전 정말로 flush 를 먼저 호출할까?
 
 우리가 JpaRepository interface 를 통해 만드는 `findByName(...)` 과 같은 Query Method 는 
 [JPA 가 제공하는 Query Creation 기능](https://docs.spring.io/spring-data/jpa/reference/jpa/query-methods.html#jpa.query-methods.query-creation)을 통해
