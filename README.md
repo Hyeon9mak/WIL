@@ -18,6 +18,7 @@
 - [Coroutine IO Dispatcher의 Thread number가 최대 Thread 갯수를 초과하는 이슈](https://sandn.tistory.com/112)
 - [쓰레드풀 과 ForkJoinPool](https://hamait.tistory.com/612)
 - [RDS 성능 개선 도우미](https://docs.aws.amazon.com/ko_kr/AmazonRDS/latest/UserGuide/USER_PerfInsights.Overview.html)
+- [WMS 재고 이관을 위한 분산 락 사용기 | 우아한형제들 기술블로그](https://techblog.woowahan.com/17416/)
 
 ## `BDDMockito` 를 사용할 때 primitive type 에 대해서는 `any()` 를 사용할 수 없다.
 
