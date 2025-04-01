@@ -73,3 +73,10 @@ Neo4j_genai 코드를 까보면 좋다.
 내부에서 Schema 외 다른 정보를 추가한다던가, Cypher 외 다른 문자를 추가하지 말라는 등의 요구사항이 포함되어 있음을 확인할 수 있다.
 
 ### Gradio
+
+<img width="946" alt="Image" src="https://github.com/user-attachments/assets/52b0a010-8e6c-4c39-9233-f0c867d2e9a4" />
+
+의도파악 스탭을 추가하면 위와 같은 편의를 누릴 수 있다.
+
+> 주어진 질의문이 영화추천을 받기 위한 질문으로 보면 true, 아니면 false 를 반환해라.
+> e.g. "토이스토리와 비슷한 장르의 영화를 추천해주세요." -> true
