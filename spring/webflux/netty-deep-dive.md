@@ -2,6 +2,10 @@
 
 - Socket: 전통적인 Blocking I/O, Input/Output Stream 활용
 - Socket Channel: Non-Blocking I/O, ByteBuffer 활용
+- blocking I/O: Thread 가 I/O 작업이 끝날 때까지 대기
+- non-blocking I/O: Thread 가 I/O 작업을 기다리지 않고 다음 작업을 수행하러 떠남
+- synchronous I/O: I/O 작업 결과를 알기 위해 Thread 가 대기하는 방식
+- asynchronous I/O: I/O 작업 결과가 준비되었을 때 Thread 에게 알림(Callback)
 
 ## 기본 골짜 구조
 
@@ -52,3 +56,12 @@
 
 - Netty 는 inbound event 와 outbound event 로 추상화 모델을 구분하여 제공한다.
 - 이를 통해 데이터가 이동하는 방향을 개발자가 크게 고려하지 않고도 비즈니스 개발에 집중할 수 있도록 했다.
+
+## 동시 접속 수를 늘리기 위해 Tomcat Thread Pool 을 늘리는게 답일까?
+
+- Tomcat Thread Pool 을 늘리는 것은 근본적인 해결책이 아니다.
+  - Thread Pool 을 늘리면 Context Switching 비용이 증가한다.
+  - Thread Pool 을 늘리면 GC 비용이 증가한다.
+    - Stop-the-world 가 더 길게 발생한다.
+- Thread Pool 을 늘리는 것은 어쩔 수 없이 발생하는 병목 현상을 완화하는 임시방편일 뿐이다.
+- Thread Pool 을 늘리는 것보다, 애초에 Thread 가 I/O 작업을 기다리지 않도록 하는 것이 더 근본적인 해결책이다.
