@@ -105,3 +105,5 @@ VM 의 특정 포트로 들어왔다고 해서 특정 Pod 로 가는게 아니�
 ![](https://i.imgur.com/n1CHqEs.png)
 ![](https://i.imgur.com/fu2sA9i.png)
 ![](https://i.imgur.com/Vb03MP5.png)
+
+k8s 내부적으로도 결국 특정 노드에 묶는 다던지, pod 가 죽었다가 다시 뜰 때도 특정 스토리지를 이용해서 본인의 내용을 원복한다던지 여러가지 효과를 누릴 수 있다.
