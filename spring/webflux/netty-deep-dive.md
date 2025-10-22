@@ -12,6 +12,21 @@
 ### BootStrap
 
 - EventLoopGroup, EventLoop 초기화 설정하는 구조체
+- 크게 EventLoop, Channel 전송 모드, Channel pipeline 설정을 담당한다.
+  - EventLoop 설정에는 SocketChannel 에서 발생한 Event 를 처리하는 Thread 모델에 대한 구현이 담겨있다.
+  - Channel 전송 모드는 Blocking, Non-Blocking, epoll(입출력 다중화 기법)
+  - Channel pipeline 설정에는 Handler Chain 을 설정한다.
+- BootStrap 은 아래와 같은 논리적 구조를 갖는다.
+  - 전송 계층(Socket Mode 및 I/O 종류)
+  - EventLoop(단일 스레드 또는 다중 스레드)
+  - Channel Pipeline (Handler Chain)
+  - Socket 주소 및 포트
+  - Socket 옵션
+- BootStrap 은 클라이언트/서버 모드로 나뉜다.
+  - 클라이언트 모드: Bootstrap
+  - 서버 모드: ServerBootstrap
+- BootStrap 은 자동으로 BlockingServer 또는 NonBlokcingServer 와 동일한 동작을 하는 애플리케이션을 작성해준다.
+  - 개발자는 단순히 사용할 입출력 모드에 해당하는 Socket Channel 클래스를 설정하기만 하면 된다.
 
 ### EventLoopGroup
 
