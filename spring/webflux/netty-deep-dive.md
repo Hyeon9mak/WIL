@@ -4,6 +4,13 @@
 - Socket Channel: Non-Blocking I/O, ByteBuffer 활용
 - blocking I/O: Thread 가 I/O 작업이 끝날 때까지 대기
 - non-blocking I/O: Thread 가 I/O 작업을 기다리지 않고 다음 작업을 수행하러 떠남
+- epoll: 입출력 다중화 기법
+  - 보통의 경우 Select System Call 을 이용하는데, 이는 루프를 돌며 각 FD 의 상태를 확인하는 방식이라 비효율적이다.
+    - 상태 확인 기반으로, 커널과 사용자 공간 사이에서 fd_set을 순환하며 모든 파일 디스크립터의 상태를 일일이 확인
+    - 호출 시마다 모든 파일 디스크립터의 상태를 커널에 전달하고 결과를 받음
+  - epoll 은 커널 레벨에서 CallBack 을 통해 FD 상태 변화를 감지한다.
+    - 이벤트 기반으로, 커널이 파일 디스크립터의 상태 변화를 직접 감지하고 알림
+    - 파일 디스크립터의 상태 변화를 커널에 등록하고, 변경이 있을 때만 알림을 받음
 - synchronous I/O: I/O 작업 결과를 알기 위해 Thread 가 대기하는 방식
 - asynchronous I/O: I/O 작업 결과가 준비되었을 때 Thread 에게 알림(Callback)
 
@@ -35,6 +42,8 @@
     - Boss Group: connection accept 관리.
     - Worker Group: I/O (business logic) 수행 관리.
     - 이 때문에 보통 Boss Group 1: N Worker Group 비율을 갖는다.
+- blocking, non-blocking, epoll 등 I/O 모드에 따라 EventLoopGroup 구현체가 다르다.
+  - 즉 구현체를 바꾸면 I/O 모드를 바꿀 수 있다는 뜻.
 
 ### EventLoop
 
