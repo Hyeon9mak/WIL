@@ -73,12 +73,23 @@
 
 ### broker 내부 log 수집 및 분석
 - Elastic Search 등을 활용해서 수집 후 분석한다.
-	- Q. message payload 가 Topic 마다 다르고, 자연어 검색을 흔히 하기 때문일까?
+	- log 양이 많고 다양하다.
+		- request, network/socket, controller/ISR, GC 등...
+		- 장애, Leader swap, partition rebalancing 시점마다 log 폭증
+		- 특정 partition, 특정 broker.id 의 log 를 찾아봐야 하는 경우가 많음.
+			- 결국 검색이 핵심이 된다.
+		- timestamp 기반 indexing, time-range query 최적화 등
+- 단순 file 수집 분석시 Multi broker 분석이 너무 어렵고, timestamp 기반 분석이 어렵다.
 
 ### kafka application log 수집 및 분석
 - kafka 는 내부적으로 log4j 기반 application log 를 남긴다.
 	- broker 내부 `log4j.properties` 파일을 이용해서 logging level 변경 가능
 		- Q. broker 마다 일일히? cluster level 에서 일괄로 변경 가능한 방법이 있을까?
+		- A. 공식적으로 지원하는 기능은 없다.
+			- 다만 broker 를 생성하는 시점에 미리 작성해둔 script 로 자동 설정을 진행하거나 (like EC2)
+			- container 기반 Orchestration 환경(k8s 등)이라면
+				- Infra level(for node)에는 helm chart 에 agent(e.g. node exporter, DaemonSet 등) 설치 기입
+				- App level(for pod)에는 ConfigMap 에 log4j 관련 공통 설정 기입
 - `**/kafka/logs/` 하위에 log file 들이 남는다.
 	- 여러 종류가 있음. 각각 나누어 적재되고 있다.
 	- logging level 을 너무 낮추는 등 이유로 log file 의 크기가 너무 커지거나 개수가 많아지면 Disk 공간 이슈가 생길 수 있으니 주의
@@ -99,12 +110,12 @@
 	- prometheus 는 exporter 가 말아둔 metric 을 pull 해서 본인의 DB 에 적재한다.
 - JMX exporter 를 통해 metric 수집 후 말아놓으면 된다!
 	- JMX exporter 는 broker 마다마다 설치해서 cluster 내 모든 broker 에 설치되어야 한다.
-	- Q. 이것도 일일히? clsuter level 에서 일괄 설치가 가능할까?
+		- 이 역시도 마찬가지로 운영 framework 를 통해 일괄 반영 가능
 
 ### Node exporter 기반 hw metric 확보
 - node exporter 로 CPU, memory, disk, network 등 resource metric 수집
 - prometheus 에서 사용하는 표준
-- 이 역시도 cluster 내 모든 broker 에 설치 되어야 한다.
+	- 이 역시도 마찬가지로 운영 framework 를 통해 일괄 반영 가능
 
 ### Kafka exporter 기반 Consumer metric 확보
 - Consumer 의 LAG 를 monitoring 하는 것이 가장 중요하다.
