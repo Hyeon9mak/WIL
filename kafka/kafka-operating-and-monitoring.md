@@ -1,3 +1,4 @@
+# Kafka 운영과 모니터링
 > Grafana 와 Prometheus 기반 모니터링을 중점적으로 설명
 
 ## 안정적인 운영을 위한 Cluster 구성
