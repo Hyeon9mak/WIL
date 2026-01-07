@@ -17,3 +17,12 @@
 	- HTTPS 의 그것과 동일하다.
 - 대칭 키 + 비대칭 키 를 모두 사용한다.
 	- 보안과 성능 효율을 모두 챙기기 위해 복잡성을 희생한다.
+
+## SSL 을 활용한 암호화
+- kafka 에서는 2가지 저장소를 활용해 암호 수준을 높인다.
+	- TrustStore: private key, public certificate(인증서) 저장
+	- KeyStore: CA(Certificate Authority) 인증서 저장
+- Server(Broker) 는 TrustStore 와 KeyStore 를 모두 가짐
+	- 이 때 Cluster 구조라면 하나의 TrustStore 를 모든 broker 가 동일하게 갖는다.
+	- CA 인증서로 모든 KeyStore 를 신뢰함
+- Client 는 TrustStore 를 가짐
