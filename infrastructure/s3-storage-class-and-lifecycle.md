@@ -172,6 +172,59 @@ AWS S3 는 Lifecycle rule 적용 기준을 익일 00:00 UTC 로 정하고 있다
 
 <br>
 
+## 🪣 적용 이후 비용 절감 효과
+Glacier 와 Lifecycle 을 활용했을 때 어느정도의 Storage 비용 절감 효과를 누릴 수 있을까?
+간단한 가정을 통해 비용을 추산해보자.
+
+- **데이터 크기:** 레코드당 평균 4KB (search_result 텍스트 포함 시 보수적 설정)
+- **일일 생성 건수:** 55,000건
+- **데이터 크기:** $55,000 \times 1,403 \text{ bytes} \approx 77.16 \text{ MB/일}$
+- **월간 데이터량:** $77.16 \text{ MB} \times 30 \text{일} \approx \mathbf{2.32 \text{ GB/월}}$
+- **연간 데이터량:** $\approx \mathbf{27.8 \text{ GB/년}}$
+
+### RDB(PostgreSQL)에만 보관할 경우 (S3 미사용)
+RDB는 스토리지 비용뿐만 아니라 성능 유지를 위한 인덱스 비용과 백업 비용이 함께 발생한다.
+
+- **데이터:** 27.8 GB
+- **인덱스 및 여유 공간:** 약 20 GB (성능 유지용)
+- **Storage 비용:** $(27.8 + 20) \times \$0.114 \approx \mathbf{\$5.45/\text{월}}$
+
+데이터가 늘어날수록 **인덱스 크기 비대화**, **Vacuum 성능 저하**, **백업 시간 증대**로 인해 더 높은 사양의 인스턴스(CPU/RAM)가 필요해지며, 스토리지 비용 외 운영 비용이 더 많이 발생한다. 자주 조회/변경 되는 데이터라면 이 비용을 감당할 이유가 충분하겠으나, 로그성 데이터는 그렇지 않다.
+
+### S3 이관 후 Storage Class(S3 Standard) 고정
+일배치로 parquet 압축 후 S3로 넘기는 방식. Parquet 압축률을 50%로 가정하면 월 데이터는 약 14GB 가 된다.
+
+- **데이터 (Parquet 압축):** 약 14 GB
+- **Storage 비용:** $14 \times \$0.023 \approx \mathbf{\$0.32/\text{월}}$
+
+단순 RDB 저장 대비 약 **17배** 저렴하다. 게다가 인스턴스 성능에 영향을 주지 않으므로 RDB 운영에 필요한 사양을 최소한으로 유지할 수 있다.
+
+### S3 이관 + Storage Class 최적화
+30일(Standard-IA), 90일(Glacier IR) 주기로 클래스를 변경하는 방식.
+
+- **비용 구성:**
+    - 최근 1개월(Standard): $1.16 \text{ GB} \times \$0.023 \approx \$0.026$
+    - 2~3개월차(IA): $2.32 \text{ GB} \times \$0.0125 \approx \$0.029$
+    - 그 외(Glacier IR): 약 10 GB $\times \$0.005 \approx \$0.05$
+- **합계:** **월 약 $0.10 내외**
+    
+RDB 대비 약 **50배 이상 저렴**하게 데이터 보관이 가능하다. 특히 데이터가 연 단위로 쌓일수록 절감 폭은 기하급수적으로 커진다.
+
+### 주의할 점
+저장 효율을 위해 parquet 압축을 수행하는 것은 좋지만, parquet 압축 또한 디테일한 고민이 필요하다.
+단순히 row 하나를 parquet 으로 압축 후 업로드 하면 아래와 같은 문제를 마주칠 수 있다.
+
+#### S3 는 저장 비용 뿐만 아니라 요청(조회, 업로드) 비용 또한 발생한다.
+여러 row 를 하나의 parquet 로 압축 후 업로드 하는 구조라면 비용이 거의 발생하지 않지만, row 단위로 parquet 을 업로드 한다면 비용이 크게 발생할 수 있다.
+
+#### 객체당 최소 용량 요건(128KB)이 있다.
+> S3 Standard-IA 및 S3 One Zone-IA 스토리지의 청구 가능한 최소 객체 크기는 128KB입니다. 이보다 작은 객체는 저장될 수는 있지만, 128KB의 용량에 대해 해당하는 스토리지 클래스 요금이 부과됩니다. 
+
+> S3 Glacier Flexible Retrieval 및 S3 Glacier Deep Archive 스토리지 클래스에 저장된 객체의 경우 아카이브된 각 객체의 추가 메타데이터 40KB에 대한 요금이 부과됩니다. 이때 8KB에는 S3 Standard 요금이 부과되고 32KB에는 S3 Glacier Flexible Retrieval 또는 S3 Deep Archive 요금이 부과됩니다. 이를 통해 S3 LIST API 또는 S3 Inventory 보고서를 사용하여 모든 S3 객체의 실시간 목록을 확인할 수 있습니다. S3 Glacier Instant Retrieval에서 청구 가능한 최소 객체 크기는 128KB입니다. 이보다 작은 객체는 저장될 수는 있지만, 128KB의 용량에 대해 해당하는 스토리지 클래스 요금이 부과됩니다. 
+
+만약 하루치 5.5만 건을 하나의 Parquet 파일로 합치지 않고 개별로 저장한다면, 오히려 관리 비용과 최소 용량 과금 때문에 비용이 더 나올 수 있다.
+
+<br>
 ## References
 
 - [AWS S3 Storage Classes 공식 페이지](https://aws.amazon.com/s3/storage-classes/)
