@@ -59,7 +59,7 @@ Skip 은 어떨까?  1,000,000 건의 데이터들 중, 1건의 데이터에 문
 Spring 은 기본적으로 ThreadLocal 을 이용해 Thread 단위의 Transaction 을 관리한다.
 따라서 Spring Batch Step 내부에서 별도의 병렬 처리 코드를 작성하는 경우, 병렬 처리에 사용된 Thread 들은 Step 의 Transaction Context 를 공유하지 못한다.
 
-<img width="637" height="388" alt="Image" src="https://github.com/user-attachments/assets/6c0afbc8-b527-410b-a49a-4f5b7a375dd1" />
+<img width="777" height="470" alt="Image" src="https://github.com/user-attachments/assets/d5487839-9e29-48f3-9aa3-2291c21e4c91" />
 
 새롭게 생성된 Thread 들은 Step 의 Transaction Context 를 알지 못하기 때문에 Transaction 을 보장 받지 못한다.
 
@@ -113,10 +113,9 @@ Chunk 기반 처리 방식은 Step 이 데이터를 일정 단위로 읽고(Read
 - Reader: Item 단위로 하나씩 데이터를 읽어온다. 이를 Chunk 수 만큼 반복한다.  
 - Processor: Reader 가 읽어온 Item 단위 데이터를 가공한다. Processor 가 없는 경우 Reader 가 읽어온 Item 을 그대로 Write 로 전달한다.  
 - Writer: Item 들을 모아 Chunk 단위로 한꺼번에 기록한다.  
-  
-  
+
 ### ItemReader Paging 처리  
-이 때 Reader 에서 실제 Item(데이터) 단위로 RDB 에 query 를 수행하는 것은 지나치게 비효율적일 것이다.  
+Reader 에서 실제 Item(데이터) 단위로 RDB 에 query 를 수행하는 것은 지나치게 비효율적이이다.  
 그렇다고 모든 데이터를 한꺼번에 읽어오는 것 또한 메모리에 부담이다.  
 때문에 Reader 내부적으로는 Paging 처리를 이용해서 적정한 크기의 데이터를 읽어오도록 한다.  
 이를 `List<Item>` 단위로 Processor 에게 넘길 수도 있고, Iterator 를 이용해 Item 단위로 하나씩 넘길 수도 있다.  
@@ -137,17 +136,26 @@ Chunk 기반 처리 방식은 Step 이 데이터를 일정 단위로 읽고(Read
 6. 위 과정을 모든 데이터(10,000 건) 가 처리될 때까지 반복한다.  
   
 <br>
-  
-## Multi-threaded Step  
-  
+
+## AsyncItemProcessor
+
+<img width="1059" height="563" alt="Image" src="https://github.com/user-attachments/assets/8ad1d3a7-9f18-4a64-88d9-2704880931e6" />
+
+AsyncItemProcessor 는 Chunk 동작 단위 중 process 단계에서 새로운 thread 를 할당해 비동기적으로 Item 을 처리한다.
+process 단계가 완료되면 writer 로 Feature 를 넘기고, writer 단계에서 Future 를 종합하여 기록한다.
+
 <br>  
   
-## AsyncItemProcessor  
-  
+## Multi-threaded Step  
+
+<img width="1134" height="611" alt="Image" src="https://github.com/user-attachments/assets/af732d71-0934-44f7-b3bd-15f3645ace8d" />
+
 <br>  
   
 ## Partitioning  
-  
+
+<img width="1383" height="655" alt="Image" src="https://github.com/user-attachments/assets/8aa7e512-404a-480a-b06d-41397718afe0" />
+
 <br>  
   
 ## 시나리오별 권장 전략  
@@ -156,3 +164,4 @@ Chunk 기반 처리 방식은 Step 이 데이터를 일정 단위로 읽고(Read
   
 ## References  
  - [Spring Batch Documentation - Chunk-oriented Processing](https://docs.spring.io/spring-batch/reference/step/chunk-oriented-processing.html)
+ - [https://github.com/Hyeon9mak/lab/tree/master/spring-batch-partitioning](https://github.com/Hyeon9mak/lab/tree/master/spring-batch-partitioning)
