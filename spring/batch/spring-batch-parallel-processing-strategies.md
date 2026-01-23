@@ -142,7 +142,93 @@ Reader 에서 실제 Item(데이터) 단위로 RDB 에 query 를 수행하는 �
 <img width="1059" height="563" alt="Image" src="https://github.com/user-attachments/assets/8ad1d3a7-9f18-4a64-88d9-2704880931e6" />
 
 AsyncItemProcessor 는 Chunk 동작 단위 중 process 단계에서 새로운 thread 를 할당해 비동기적으로 Item 을 처리한다.
-process 단계가 완료되면 writer 로 Feature 를 넘기고, writer 단계에서 Future 를 종합하여 기록한다.
+**process 단계가 완료되면 writer 로 Feature 를 넘기고, writer 단계에서 Future 를 종합하여 기록**한다.
+
+```kotlin
+@Bean
+fun eatStep(
+  jobRepository: JobRepository,
+  transactionManager: PlatformTransactionManager,
+  eatableCookLogReader: ItemReader<EatableCookingLog>,
+  asyncItemProcessor: AsyncItemProcessor<EatableCookingLog, AteCookingLog>,
+  ateCookingLogAsyncWriter: AsyncItemWriter<AteCookingLog>,
+): Step {
+  return StepBuilder(STEP_NAME, jobRepository)
+    .chunk<EatableCookingLog, Future<AteCookingLog>>(CHUNK_SIZE)
+    .transactionManager(transactionManager)
+    .reader(eatableCookLogReader)
+    .processor(asyncItemProcessor)
+    .writer(ateCookingLogAsyncWriter)
+    .build()
+}
+
+@Bean
+fun eatableCookLogReader(
+  jdbcTemplate: JdbcTemplate,
+): ItemReader<EatableCookingLog> {
+  return NoOffsetPagingItemReader(
+    jdbcTemplate = jdbcTemplate,
+    chunkSize = CHUNK_SIZE,
+  )
+}
+
+@Bean
+fun asyncItemProcessor(): AsyncItemProcessor<EatableCookingLog, AteCookingLog> {
+  val processor = ItemProcessor<EatableCookingLog, AteCookingLog> { it.eat() }
+  val asyncItemProcessor = AsyncItemProcessor(processor)
+  asyncItemProcessor.setTaskExecutor(cookingLogUpdateExecutor())
+  return asyncItemProcessor
+}
+
+@Bean
+fun ateCookingLogAsyncWriter(
+  ateCookingLogWriter: ItemWriter<AteCookingLog>,
+): AsyncItemWriter<AteCookingLog> {
+  return AsyncItemWriter(ateCookingLogWriter)
+}
+
+@Bean
+fun cookingLogUpdateExecutor(): TaskExecutor {
+  val executor = ThreadPoolTaskExecutor()
+  executor.corePoolSize = POOL_SIZE
+  executor.maxPoolSize = POOL_SIZE
+  executor.setThreadNamePrefix("async-processor-")
+  executor.setWaitForTasksToCompleteOnShutdown(true)
+  executor.initialize()
+  return executor
+}
+```
+
+> 전체 코드는 [https://github.com/Hyeon9mak/lab/tree/master/spring-batch-async-item-processor](https://github.com/Hyeon9mak/lab/tree/master/spring-batch-async-item-processor) 에서 확인할 수 있다.
+
+기본적으로 병렬 처리에 사용되는 thread 의 수는 `SimpleAsyncTaskExecutor` 에 의해 결정된다.
+`SimpleAsyncTaskExecutor` 는 가용 가능한 자원만큼 무제한으로 thread 를 생성하기 때문에, 자원 고갈에 따른 OOM 이슈가 발생할 수 있다.
+따라서 대량의 데이터가 발생하는 운영 환경에서는 직접 `TaskExecutor` 를 구현해 적정한 thread 수를 제어하는 것이 좋다.
+
+### 순서 보장
+
+Chunk 내부의 process 에서 병렬 처리가 수행되므로, Chunk 단위에서는 순서를 보장받을 수 있다.
+때문에 `ItemStreamReader`, `ItemStreamWriter` 를 사용하는 경우에도 순서가 보장된다.
+
+### 이름 그대로 process 만 병렬 처리
+
+그림을 통해 이해할 수 있듯, `AsyncItemProcessor` 는 process 단계에서만 병렬 처리를 수행한다.
+때문에 reader, writer 에서 병목이 발생하는 경우 큰 효과를 기대하기 어렵다.
+
+### 예외 처리
+
+앞서 강조했듯, `AsyncItemProcessor` 는 process 단계에서 Feature 를 이용한 비동기 처리를 수행한 후 writer 단계에서 Future 를 정리하고 적재한다.
+따라서 process 단계에서 예외가 발생한 경우 예외가 Feature 로 wrapping 되어있기 때문에, Feature 를 unwrapping 하는 writer 단계에서 예외가 처리된다.
+
+가령 process 단계에서 `BusinessException` 에 대한 skip 설정을 해두었어도,
+process 단계에서 발생한 `BusinessException` 은 writer 단계에서 `ExecutionException` 으로 wrapping 되어 전파된다.
+`ExecutionException` 에 대한 별도 설정을 하지 않았다면 Batch 가 그대로 중단 되는 것이다.
+
+### Transaction 관리
+
+`AsyncItemProcessor` 는 process 단계에서 새로운 thread 를 생성해 비동기적으로 Item 을 처리한다.
+따라서 process 단계에서 생성된 thread 들은 Step 의 Transaction Context 를 공유하지 못한다.
+이는 앞서 언급한 직접 병렬 처리 구현 시 발생하는 문제점과 동일하다.
 
 <br>  
   
@@ -150,18 +236,178 @@ process 단계가 완료되면 writer 로 Feature 를 넘기고, writer 단계�
 
 <img width="1134" height="611" alt="Image" src="https://github.com/user-attachments/assets/af732d71-0934-44f7-b3bd-15f3645ace8d" />
 
+Multi-threaded Step 은 Chunk 단위 동작 전체를 하나의 thread 로 처리한다.
+즉 reader, processor, writer 단계가 모두 하나의 thread 에서 처리되는 것이다.
+
+```kotlin
+
+```
+
 <br>  
   
 ## Partitioning  
 
 <img width="1383" height="655" alt="Image" src="https://github.com/user-attachments/assets/8aa7e512-404a-480a-b06d-41397718afe0" />
 
+Partitioning 은 Step 자체를 여러 개로 나누어 병렬로 처리하는 전략이다.
+얼핏 Multi-threaded Step 과 비슷해 보이지만, Multi-threaded Step 는 하나의 Step 내부에서 Chunk 단위로 thread 를 할당하는 반면,
+Partitioning 은 Step 자체를 여러 개로 나누어 각각의 Step 을 별도의 thread 에서 처리한다는 차이가 있다.
+Partitioning 은 각각의 Step 들이 Context(`StepExecution`, `StepExecutionContext`) 를 독립적으로 갖기 때문에, 개별적인 상태 관리가 가능하다.
+
+```kotlin
+@Configuration
+class CookingLogUpdateJob {
+
+  @Bean(JOB_NAME)
+  fun job(
+    jobRepository: JobRepository,
+    eatStepManager: Step,
+  ): Job {
+    return JobBuilder(JOB_NAME, jobRepository)
+      .start(eatStepManager)
+      .preventRestart()
+      .build()
+  }
+
+  @Bean
+  fun cookingLogUpdateExecutor(): TaskExecutor {
+    val executor = ThreadPoolTaskExecutor()
+    executor.corePoolSize = POOL_SIZE
+    executor.maxPoolSize = POOL_SIZE
+    executor.setThreadNamePrefix("partition-thread")
+    executor.setWaitForTasksToCompleteOnShutdown(true)
+    executor.initialize()
+    return executor
+  }
+
+  @Bean
+  fun eatStepPartitionHandler(
+    eatStep: Step,
+    cookingLogUpdateExecutor: TaskExecutor,
+  ): TaskExecutorPartitionHandler {
+    val partitionHandler = TaskExecutorPartitionHandler()
+    partitionHandler.step = eatStep
+    partitionHandler.setTaskExecutor(cookingLogUpdateExecutor)
+    partitionHandler.gridSize = POOL_SIZE
+    return partitionHandler
+  }
+
+  @StepScope
+  @Bean
+  fun eatStepPartitioner(
+    @Value("#{jobParameters['startDate']}") startDate: String?,
+    @Value("#{jobParameters['endDate']}") endDate: String?,
+    jdbcTemplate: JdbcTemplate,
+  ): CookingLogIdRangePartitioner {
+    requireNotNull(startDate) { "startDate job parameter is required" }
+    requireNotNull(endDate) { "endDate job parameter is required" }
+
+    val startDateInstant = LocalDate.parse(startDate, DateTimeFormatter.ISO_LOCAL_DATE)
+      .atStartOfDay(KST_ZONE_ID)
+      .toInstant()
+    val endDateInstant = LocalDate.parse(endDate, DateTimeFormatter.ISO_LOCAL_DATE)
+      .atStartOfDay(KST_ZONE_ID)
+      .toInstant()
+    return CookingLogIdRangePartitioner(
+      jdbcTemplate = jdbcTemplate,
+      startDate = startDateInstant,
+      endDate = endDateInstant,
+      dataCountPerPartition = CHUNK_SIZE,
+    )
+  }
+
+  @Bean
+  fun eatStepManager(
+    jobRepository: JobRepository,
+    eatStepPartitioner: CookingLogIdRangePartitioner,
+    partitionHandler: TaskExecutorPartitionHandler,
+  ): Step {
+    return StepBuilder("eat-step-manager", jobRepository)
+      .partitioner(STEP_NAME, eatStepPartitioner)
+      .partitionHandler(partitionHandler)
+      .build()
+  }
+
+  @Bean
+  fun eatStep(
+    jobRepository: JobRepository,
+    transactionManager: PlatformTransactionManager,
+    eatableCookLogReader: ItemReader<EatableCookingLog>,
+    ateCookingLogWriter: ItemWriter<AteCookingLog>,
+  ): Step {
+    return StepBuilder(STEP_NAME, jobRepository)
+      .chunk<EatableCookingLog, AteCookingLog>(CHUNK_SIZE)
+      .transactionManager(transactionManager)
+      .reader(eatableCookLogReader)
+      .processor(processor())
+      .writer(ateCookingLogWriter)
+      .build()
+  }
+}
+```
+
+> 전체 코드는 [https://github.com/Hyeon9mak/lab/tree/master/spring-batch-partitioning](https://github.com/Hyeon9mak/lab/tree/master/spring-batch-partitioning) 에서 확인할 수 있다.
+
+Partitioning 에는 크게 2가지 개념의 Component 가 추가된다.
+
+- Partitioner: 조건에 따라 Partition(Step) 을 나누는 역할을 수행한다. 각 Step 들이 처리할 Chunk 범위를 결정한다.
+- StepManager: Partitioner 와 나눠진 Partition(Step) 들을 관리한다.
+
+구현이 복잡하다고 느낄 수 있지만, 개념을 이해하고 코드를 따라간다면 크게 어렵지 않다.
+
+Partitioning 도 역시나 별도 설정이 없다면 병렬 처리에 사용되는 thread 의 수는 `SimpleAsyncTaskExecutor` 에 의해 결정된다.
+대량의 데이터가 발생하는 운영 환경에서는 직접 `TaskExecutor` 를 구현해 적정한 thread 수를 제어하는 것이 좋다.
+
+### Transaction 관리
+
+Partitioning 은 Step 자체를 여러 개로 나누어 병렬로 처리하는 전략이다.
+Chunk 내부 동작은 모두 단일 Thread 에서 처리되기 때문에, Transaction 관리가 아주 쉽다.
+
+### 순서 보장
+
+Partitioning 은 Step 내부 read - process - write 가 하나의 thread 에서 처리되기 때문에, 각 partition 간 순서를 보장할 수 없다.
+다만 Step 내부 에서는 단일 Thread 로, 하나의 `StepExecution` 과 `StepExecutionContext` 를 공유하기 때문에 Chunk 단위에서는 순서를 보장받을 수 있다.
+때문에 `ItemStreamReader`, `ItemStreamWriter` 를 사용하는 경우에도 순서가 보장된다.
+
+### Step 간 실패로부터 격리
+
+각 Partition(Step) 들이 독립적인 Context 를 갖기 때문에, 서로 다른 Step 들 간의 실패로부터 격리된다.
+가령 Partition(Step) A 가 실패하더라도 Partition(Step) B 는 영향을 받지 않고 정상적으로 완료될 수 있다.
+이 모든 결과는 StepManager 가 집계하여 최종 Job 결과로 반영한다.
+
+```
+Partition(Step) A: FAILED
+Partition(Step) B: COMPLETED
+Partition(Step) C: COMPLETED
+------------------
+Job: FAILED
+```
+
+이 경우 Batch 를 재시작하여 실패한 Partition(Step) A 만 동작하도록 할 수 있다.
+
+주의할 점은 위와 같은 특성으로 인해 Step 내부에서 Skip 을 잘못 사용할 경우 실패지점을 되찾아 재실행 하기 어려워진다는 것이다.
+
+```
+Partition(Step) A: COMPLETED (1,000 건 중 1건 Skip)
+Partition(Step) B: COMPLETED
+Partition(Step) C: COMPLETED
+------------------
+Job: COMPLETED
+```
+
+Partitioning 과 같은 병렬 처리를 고민하는 시점이라면 이미 대량의 데이터를 다루고 있을 가능성이 높다.
+때문에 전체 데이터를 다시 처리하는 비효율을 피하기 위해 성공/실패 시나리오를 명확히 구분하고, 
+설계를 진행하는 것이 중요하겠다.
+
 <br>  
   
-## 시나리오별 권장 전략  
+## 시나리오별 권장 전략
+
+DB Thread Pool 조절해야함
   
 <br>  
   
 ## References  
  - [Spring Batch Documentation - Chunk-oriented Processing](https://docs.spring.io/spring-batch/reference/step/chunk-oriented-processing.html)
  - [https://github.com/Hyeon9mak/lab/tree/master/spring-batch-partitioning](https://github.com/Hyeon9mak/lab/tree/master/spring-batch-partitioning)
+ - [https://github.com/Hyeon9mak/lab/tree/master/spring-batch-async-item-processor](https://github.com/Hyeon9mak/lab/tree/master/spring-batch-async-item-processor)
