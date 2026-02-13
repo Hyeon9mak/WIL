@@ -45,7 +45,6 @@ fun processItems(items: List<Item>): List<ProcessedItem> {
 
 그러나 Spring Batch 에서 제공하는 병렬 처리가 아닌 경우 여러가지 문제가 생기기 쉽다.
 
-
 ### Collection 단위로 인해 발생하는 비효율
 
 `processItems` 메서드 파라미터로 넘어온 1,000,000 건의 데이터들 중, 1건의 데이터에 문제가 발생하여 Retry 가 발생했다고 가정해보자.
@@ -240,8 +239,74 @@ Multi-threaded Step 은 Chunk 단위 동작 전체를 하나의 thread 로 처�
 즉 reader, processor, writer 단계가 모두 하나의 thread 에서 처리되는 것이다.
 
 ```kotlin
+    @Bean
+    fun cookingLogUpdateExecutor(): TaskExecutor {
+        val executor = ThreadPoolTaskExecutor()
+        executor.corePoolSize = POOL_SIZE
+        executor.maxPoolSize = POOL_SIZE
+        executor.setThreadNamePrefix("multi-threaded-step-")
+        executor.setWaitForTasksToCompleteOnShutdown(true)
+        executor.initialize()
+        return executor
+    }
 
+    @Bean
+    fun eatStep(
+        jobRepository: JobRepository,
+        transactionManager: PlatformTransactionManager,
+        cookingLogUpdateExecutor: TaskExecutor,
+        eatableCookLogReader: ItemReader<EatableCookingLog>,
+        eatCookLogProcessor: ItemProcessor<EatableCookingLog, AteCookingLog>,
+        ateCookingLogWriter: ItemWriter<AteCookingLog>,
+    ): Step {
+        return StepBuilder(STEP_NAME, jobRepository)
+        .chunk<EatableCookingLog, AteCookingLog>(CHUNK_SIZE, transactionManager)
+        .reader(eatableCookLogReader)
+        .processor(eatCookLogProcessor)
+        .writer(ateCookingLogWriter)
+        .taskExecutor(cookingLogUpdateExecutor)
+        .build()
+    }
 ```
+
+> 전체 코드는 [https://github.com/Hyeon9mak/lab/tree/master/spring-batch-multi-threaded-step](https://github.com/Hyeon9mak/lab/tree/master/spring-batch-multi-threaded-step) 에서 확인할 수 있다.
+
+Spring Batch 6.0 이전 버전에서는 `.chunk<EatableCookingLog, AteCookingLog>(CHUNK_SIZE, transactionManager)` 형태로 내부에서 `ChunkOrientedTasklet` 를 생성하여 
+각각의 Chunk 단위로 thread 를 할당해서 read-process-write 를 수행할 수 있었다.
+
+[그러나 Spring Batch 6.0 부터는 `StepBuilder` 에서 아래와 같은 형태로 호출 방식이 변경되었다.](https://github.com/spring-projects/spring-batch/wiki/Spring-Batch-6.0-Migration-Guide#new-chunk-oriented-model-implementation)
+
+```kotlin
+    @Bean
+    fun eatStep(
+        jobRepository: JobRepository,
+        transactionManager: PlatformTransactionManager,
+        cookingLogUpdateExecutor: AsyncTaskExecutor, // AsyncTaskExecutor 로 변경
+        eatableCookLogReader: ItemReader<EatableCookingLog>,
+        eatCookLogProcessor: ItemProcessor<EatableCookingLog, AteCookingLog>,
+        ateCookingLogWriter: ItemWriter<AteCookingLog>,
+    ): Step {
+    return StepBuilder(STEP_NAME, jobRepository)
+        .chunk<EatableCookingLog, AteCookingLog>(CHUNK_SIZE)  // transactionManager 제거 후 별도로 설정
+        .transactionManager(transactionManager)
+        .reader(eatableCookLogReader)
+        .processor(eatCookLogProcessor)
+        .writer(ateCookingLogWriter)
+        .taskExecutor(cookingLogUpdateExecutor)
+        .build()
+    }
+```
+
+기존 `ChunkOrientedTasklet` 를 생성하는 대신 `ChunkOrientedStep` 를 생성하도록 변경되었다.
+`ChunkOrientedStep` 는 read, write 작업은 단일 thread 에서 처리하고, process 작업만 별도의 worker-thread 로 분화하여 처리하는 구조로 변경되었다.
+결국 AsyncItemProcessor 와 유사한 구조가 된 것이다.
+
+기존 `ChunkOrientedTasklet` 을 이용하여 정통적으로 수행되던 Multi-threaded Step 의 구조를 다시 생각해보자.
+read-process-write 작업이 모두 하나의 thread 에서 처리되는 특징을 갖고 있다.
+그러나 우리는 이미 read/write 를 수행하는 I/O bound 작업이 병렬처리 효율성이 그다지 높지 않다는 것을 예측할 수 있다.
+Spring Batch 팀에서도 병렬처리 효율성과 트랜잭션 관리, 재시도 일관성 보장 복잡성 등을 고려하여 `ChunkOrientedStep` 구조로 변경한 것으로 추측할 수 있다.
+
+**Spring Batch 7.0 이후 버전부터는 `ChunkOrientedTasklet` 가 제거될 예정이므로, Multi-threaded Step 은 사실상 앞으로 사용할 수 없는 전략이다.**
 
 <br>  
   
@@ -403,11 +468,41 @@ Partitioning 과 같은 병렬 처리를 고민하는 시점이라면 이미 대
   
 ## 시나리오별 권장 전략
 
-DB Thread Pool 조절해야함
+당연하게 Multi-threaded Step 는 모든 시나리오에서 배제된다.
+
+### 외부 API 호출이 병목 지점인 경우
+
+- AsyncItemProcessor 권장
+- read/write 단계에서 DB I/O bound 가 적은 대신, process 단계에서 API I/O bound 가 큰 경우 유리하다.
+- Partitioning 은 구현 복잡도 + Chunk 처리 순서 보장이 어렵다.
+
+### CPU 연산이 병목 지점인 경우
+
+- AsyncItemProcessor 권장
+- read/write 단계에서 DB I/O bound 가 적은 대신, process 단계에서 CPU bound 가 큰 경우 유리하다.
+- Partitioning 은 구현 복잡도 + Chunk 처리 순서 보장이 어렵다.
+
+### 대량 데이터 통계 집계
+
+- Partitioning 권장
+- read/write 단계에서 DB I/O bound 가 큰 경우 유리하다.
+- ID, 날짜 등으로 범위를 나눠서 Partition 을 나누어 독립 수행 시키기 좋다.
+- 실패시 재실행 지점이 명확하다.
+
+### 실패 격리가 필요한 경우
+
+- Partitioning 권장
+- Partition(Step) 간 실패 격리가 필요한 경우 유리하다.
+- 실패한 Partition(Step) 만 재실행 시키기 좋다.
+
+각각의 전략들은 모두 병렬처리를 이용한 성능 향상을 목적으로 하기 때문에, 병렬로 쏟아지는 요청을 받아낼 데이터베이스의 성능도 함께 고려해야 한다.
+데이터베이스가 감당할 수 있도록 Connection Pool 크기 등도 함께 꼭 신경써주어야겠다.
   
 <br>  
   
 ## References  
  - [Spring Batch Documentation - Chunk-oriented Processing](https://docs.spring.io/spring-batch/reference/step/chunk-oriented-processing.html)
+ - [https://github.com/spring-projects/spring-batch/wiki/Spring-Batch-6.0-Migration-Guide#new-chunk-oriented-model-implementation](https://github.com/spring-projects/spring-batch/wiki/Spring-Batch-6.0-Migration-Guide#new-chunk-oriented-model-implementation)
  - [https://github.com/Hyeon9mak/lab/tree/master/spring-batch-partitioning](https://github.com/Hyeon9mak/lab/tree/master/spring-batch-partitioning)
  - [https://github.com/Hyeon9mak/lab/tree/master/spring-batch-async-item-processor](https://github.com/Hyeon9mak/lab/tree/master/spring-batch-async-item-processor)
+ - [https://github.com/Hyeon9mak/lab/tree/master/spring-batch-multi-threaded-step](https://github.com/Hyeon9mak/lab/tree/master/spring-batch-multi-threaded-step)
